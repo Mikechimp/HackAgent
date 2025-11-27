@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  worker:
+    build: ./workers
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./data:/app/data:ro
+      - ./logs:/app/logs
+      - /usr/bin:/host_usr_bin:ro
+      - ./workers:/app/workers:ro
+    networks:
+      - internal
+    environment:
+      - WORKER_MODEL=local
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+
+networks:
+  internal:
+    internal: true

@@ -1,0 +1,14 @@
+blocked_terms:
+  - "reverse shell"
+  - "meterpreter"
+  - "bind shell"
+  - "execve"
+  - "ssh "
+  - "nmap"
+  - "masscan"
+  - "curl http"
+  - "wget http"
+network_require_approval: true
+auto_execute_generated_code: false
+max_tool_time_seconds: 30
+max_tool_memory_mb: 200

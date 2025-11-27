@@ -1,0 +1,4 @@
+model_default: "claude"
+max_prompt_length: 200000
+per_job_token_cap: 8000
+local_tool_timeout: 20

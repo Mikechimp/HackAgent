@@ -1,0 +1,7 @@
+whitelisted_tools:
+  - file
+  - strings
+  - xxd
+  - hexdump
+  - binwalk
+  - exiftool
