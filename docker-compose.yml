@@ -21,6 +21,29 @@ services:
           cpus: '1.0'
           memory: 1024M
 
+  orchestrator:
+    build: ./orchestrator
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./data:/app/data:ro
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      - ./workers:/app/workers:ro
+    networks:
+      - internal
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      - worker
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
 networks:
   internal:
     internal: true
