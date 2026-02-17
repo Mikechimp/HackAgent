@@ -9,12 +9,49 @@ _TOOLS_CFG = None
 _SAFETY_RULES = None
 
 
+def _load_dotenv():
+    """Load .env file into os.environ if it exists (does not override existing vars)."""
+    env_path = _ROOT / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, value = line.split("=", 1)
+            key, value = key.strip(), value.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+# Load .env on module import
+_load_dotenv()
+
+
 def _find_file(*candidates):
     """Return the first path that exists, or None."""
     for p in candidates:
         if p.exists():
             return p
     return None
+
+
+def _apply_quality_preset(settings):
+    """Apply quality preset from HACKAGENT_QUALITY env var."""
+    quality = os.environ.get("HACKAGENT_QUALITY", "").lower()
+    presets = settings.get("quality_presets", {})
+    if quality and quality in presets:
+        preset = presets[quality]
+        if "model" in preset:
+            settings["model_default"] = preset["model"]
+        if "per_job_token_cap" in preset:
+            settings["per_job_token_cap"] = preset["per_job_token_cap"]
+        if "max_tokens_response" in preset:
+            settings["max_tokens_response"] = preset["max_tokens_response"]
+        if "temperature" in preset:
+            settings["default_temperature"] = preset["temperature"]
+    return settings
 
 
 def load_settings():
@@ -26,8 +63,10 @@ def load_settings():
     defaults = {
         "model_default": "claude-sonnet-4-20250514",
         "max_prompt_length": 200_000,
-        "per_job_token_cap": 8_000,
-        "local_tool_timeout": 20,
+        "per_job_token_cap": 32_000,
+        "local_tool_timeout": 30,
+        "max_tokens_response": 8192,
+        "default_temperature": 0.0,
     }
     path = _find_file(
         Path("/app/config/settings.yaml"),
@@ -38,7 +77,10 @@ def load_settings():
             data = yaml.safe_load(f) or {}
         defaults.update(data)
 
-    # Allow env-var overrides
+    # Apply quality preset before env-var overrides
+    _apply_quality_preset(defaults)
+
+    # Allow env-var overrides (highest priority)
     if os.environ.get("HACKAGENT_MODEL"):
         defaults["model_default"] = os.environ["HACKAGENT_MODEL"]
     if os.environ.get("HACKAGENT_TOKEN_CAP"):
@@ -46,6 +88,11 @@ def load_settings():
 
     _SETTINGS = defaults
     return _SETTINGS
+
+
+def is_pentest_mode():
+    """Check if authorized pentest/bug-bounty mode is enabled."""
+    return os.environ.get("HACKAGENT_PENTEST_MODE", "false").lower() == "true"
 
 
 def load_tools_whitelist():
@@ -64,6 +111,12 @@ def load_tools_whitelist():
         _TOOLS_CFG = data.get("whitelisted_tools", [])
     else:
         _TOOLS_CFG = ["file", "strings", "xxd", "hexdump", "binwalk", "exiftool"]
+
+    # In pentest mode, add security research tools
+    if is_pentest_mode():
+        pentest_tools = data.get("pentest_tools", []) if path else []
+        _TOOLS_CFG = list(set(_TOOLS_CFG + pentest_tools))
+
     return _TOOLS_CFG
 
 

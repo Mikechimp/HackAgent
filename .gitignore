@@ -7,3 +7,5 @@ dist/
 build/
 .venv/
 logs/
+.env
+data/

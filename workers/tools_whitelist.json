@@ -4,5 +4,17 @@
   "xxd",
   "hexdump",
   "binwalk",
-  "exiftool"
+  "exiftool",
+  "objdump",
+  "readelf",
+  "nm",
+  "ldd",
+  "strace",
+  "ltrace",
+  "sha256sum",
+  "md5sum",
+  "base64",
+  "openssl",
+  "python3",
+  "jq"
 ]

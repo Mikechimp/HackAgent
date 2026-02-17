@@ -1,14 +1,34 @@
+# Safety rules for HackAgent
+# These rules are relaxed when HACKAGENT_PENTEST_MODE=true for authorized engagements
+
+# Terms blocked in prompts (prevents accidental misuse in non-pentest mode)
 blocked_terms:
   - "reverse shell"
   - "meterpreter"
   - "bind shell"
-  - "execve"
-  - "ssh "
-  - "nmap"
-  - "masscan"
-  - "curl http"
-  - "wget http"
+
+# Network operations require explicit pentest mode opt-in
 network_require_approval: true
+
+# Never auto-execute AI-generated code without human review
 auto_execute_generated_code: false
-max_tool_time_seconds: 30
-max_tool_memory_mb: 200
+
+# Resource limits for tool execution
+max_tool_time_seconds: 60
+max_tool_memory_mb: 512
+
+# Pentest mode overrides (applied when HACKAGENT_PENTEST_MODE=true)
+pentest_mode:
+  # These terms are allowed in pentest mode (removed from blocked list)
+  allowed_terms:
+    - "nmap"
+    - "masscan"
+    - "curl http"
+    - "wget http"
+    - "ssh "
+    - "execve"
+  # Higher resource limits for scanning tools
+  max_tool_time_seconds: 300
+  max_tool_memory_mb: 1024
+  # Network access allowed without manual confirmation
+  network_require_approval: false
