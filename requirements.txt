@@ -1,4 +1,4 @@
-anthropic==0.35.0   # or latest; used only if you enable Claude
+anthropic>=0.35.0
 PyYAML
 jsonschema
 psutil

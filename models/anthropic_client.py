@@ -1,7 +1,7 @@
 import os, time, json, logging
 from datetime import datetime
 try:
-    from anthropic import Anthropic, Response
+    from anthropic import Anthropic
 except Exception:
     Anthropic = None
 
@@ -53,17 +53,38 @@ def scrub_for_api(text: str) -> str:
         return text
     return text.replace(ANTHROPIC_KEY or "", "[REDACTED_API_KEY]")
 
-def call_claude_messages(messages, model="claude-3.7-sonnet", max_tokens_to_sample=4000, temperature=0.0, budget=_DEFAULT_BUDGET, max_retries=3):
+def call_claude_messages(messages, model="claude-sonnet-4-20250514", max_tokens=4000, temperature=0.0, budget=None, max_retries=3):
+    """Call the Claude Messages API with budget guards and retries.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys.
+        model: Model identifier to use.
+        max_tokens: Maximum tokens in the response.
+        temperature: Sampling temperature (0.0 = deterministic).
+        budget: Budget instance for rate/token limiting (uses default if None).
+        max_retries: Number of retry attempts on transient failures.
+    """
+    if budget is None:
+        budget = _DEFAULT_BUDGET
     client = _get_client()
     joined = " ".join([m["content"] if isinstance(m, dict) else str(m) for m in messages])
     est_tokens = max(1, len(joined) // 4)
     ok, reason = budget.allow(est_tokens=est_tokens)
     if not ok:
         raise RuntimeError(f"Budget denies request: {reason}")
-    safe_messages = []
+
+    # Separate system message from conversation messages
+    system_text = None
+    api_messages = []
     for m in messages:
         content = m["content"] if isinstance(m, dict) else str(m)
-        safe_messages.append({"role": m.get("role","user"), "content": scrub_for_api(content)})
+        role = m.get("role", "user") if isinstance(m, dict) else "user"
+        safe_content = scrub_for_api(content)
+        if role == "system":
+            system_text = safe_content
+        else:
+            api_messages.append({"role": role, "content": safe_content})
+
     attempt = 0
     backoff = 1.0
     last_err = None
@@ -71,18 +92,32 @@ def call_claude_messages(messages, model="claude-3.7-sonnet", max_tokens_to_samp
         attempt += 1
         try:
             now = time.time()
-            resp = client.messages.create(
+            kwargs = dict(
                 model=model,
-                messages=safe_messages,
-                max_tokens_to_sample=max_tokens_to_sample,
+                messages=api_messages,
+                max_tokens=max_tokens,
                 temperature=temperature,
             )
-            raw = getattr(resp, "completion", None) or getattr(resp, "content", None) or str(resp)
-            tokens_used = est_tokens
-            budget.consume(tokens=tokens_used, now_ts=now)
+            if system_text:
+                kwargs["system"] = system_text
+            resp = client.messages.create(**kwargs)
+            # Extract text from the response content blocks
+            if hasattr(resp, "content") and isinstance(resp.content, list):
+                raw = "".join(
+                    block.text for block in resp.content
+                    if hasattr(block, "text")
+                )
+            else:
+                raw = str(resp)
+            tokens_used = getattr(resp, "usage", None)
+            if tokens_used:
+                actual = getattr(tokens_used, "input_tokens", 0) + getattr(tokens_used, "output_tokens", 0)
+            else:
+                actual = est_tokens
+            budget.consume(tokens=actual, now_ts=now)
             meta = {"model": model, "timestamp": datetime.utcnow().isoformat()+"Z", "attempt": attempt}
-            LOG.info(f"Claude response: model={model} attempt={attempt} len={len(raw)}")
-            return {"raw": raw, "raw_text": raw, "tokens_estimated": tokens_used, "meta": meta}
+            LOG.info(f"Claude response: model={model} attempt={attempt} tokens={actual}")
+            return {"raw": raw, "raw_text": raw, "tokens_estimated": actual, "meta": meta}
         except Exception as e:
             last_err = e
             LOG.warning(f"Claude call error (attempt {attempt}): {e}")

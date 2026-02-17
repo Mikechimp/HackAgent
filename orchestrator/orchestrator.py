@@ -93,7 +93,7 @@ def run_job():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
         response = call_claude_messages([{"role":"system","content":"You are a constrained analysis assistant. Return JSON only."},
-                                         {"role":"user","content":triage_prompt}], model="claude-3.7-sonnet", temperature=0.0, max_tokens_to_sample=800)
+                                         {"role":"user","content":triage_prompt}], model="claude-sonnet-4-20250514", temperature=0.0, max_tokens=800)
         record_provenance(job_id, "triage", triage_prompt, response)
         print("Triage response written to logs.")
     else:
