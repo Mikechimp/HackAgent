@@ -1,4 +1,30 @@
-model_default: "claude"
+# HackAgent Settings
+# Override any value via environment variables (see .env.example)
+
+model_default: "claude-sonnet-4-20250514"
 max_prompt_length: 200000
-per_job_token_cap: 8000
-local_tool_timeout: 20
+per_job_token_cap: 32000
+local_tool_timeout: 30
+
+# Quality presets (selected via HACKAGENT_QUALITY env var)
+quality_presets:
+  low:
+    model: "claude-haiku-4-20250514"
+    per_job_token_cap: 8000
+    max_tokens_response: 2048
+    temperature: 0.0
+  standard:
+    model: "claude-sonnet-4-20250514"
+    per_job_token_cap: 16000
+    max_tokens_response: 4096
+    temperature: 0.0
+  high:
+    model: "claude-sonnet-4-20250514"
+    per_job_token_cap: 32000
+    max_tokens_response: 8192
+    temperature: 0.0
+  max:
+    model: "claude-opus-4-20250514"
+    per_job_token_cap: 64000
+    max_tokens_response: 16384
+    temperature: 0.0

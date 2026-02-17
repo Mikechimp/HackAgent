@@ -1,3 +1,4 @@
+# Core analysis tools (always available)
 whitelisted_tools:
   - file
   - strings
@@ -5,3 +6,61 @@ whitelisted_tools:
   - hexdump
   - binwalk
   - exiftool
+  - objdump
+  - readelf
+  - nm
+  - ldd
+  - strace
+  - ltrace
+  - sha256sum
+  - md5sum
+  - base64
+  - openssl
+  - python3
+  - jq
+
+# Pentest / bug-bounty tools (only available when HACKAGENT_PENTEST_MODE=true)
+pentest_tools:
+  # Network recon
+  - nmap
+  - masscan
+  - dig
+  - host
+  - whois
+  - traceroute
+  - netcat
+  # Web analysis
+  - curl
+  - wget
+  - nikto
+  - whatweb
+  - wfuzz
+  - gobuster
+  - ffuf
+  - httpx
+  - nuclei
+  # SSL/TLS
+  - sslscan
+  - sslyze
+  - testssl.sh
+  # DNS
+  - subfinder
+  - amass
+  - dnsrecon
+  # Credential & wordlist
+  - hashcat
+  - john
+  - hydra
+  # Exploitation frameworks (analysis only)
+  - msfconsole
+  - searchsploit
+  # Web proxy
+  - sqlmap
+  # Misc
+  - enum4linux
+  - smbclient
+  - rpcclient
+  - netstat
+  - ss
+  - arp
+  - ip

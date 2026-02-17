@@ -82,25 +82,38 @@ def run_job():
         excerpt = [{"note":"no worker summary found"}]
 
     triage_prompt = (
-        "SYSTEM: You are a read-only triage assistant. Output **strict JSON** following this schema: "
-        "summary (string), types_detected (list), suggested_next_steps (list), confidence (0-1), provenance (list).\n\n"
+        "You are performing artifact triage for an authorized security engagement.\n\n"
+        "Analyze the following job metadata and worker output. Provide thorough analysis.\n\n"
+        "Return **strict JSON** with keys: summary (string), types_detected (list), "
+        "iocs (list), vulnerabilities (list), suggested_next_steps (list), "
+        "confidence (0-1 float), provenance (list).\n\n"
         f"JOB_META: {json.dumps(job.get('meta', {}))}\n\n"
         f"WORKER_SUMMARY: {json.dumps(excerpt)}\n\n"
-        "TASK: Provide the JSON described above."
+        "TASK: Provide the JSON described above. Be thorough and specific."
     )
 
     # Call Claude if API key present; otherwise echo local fallback
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
-        response = call_claude_messages([{"role":"system","content":"You are a constrained analysis assistant. Return JSON only."},
-                                         {"role":"user","content":triage_prompt}], model="claude-sonnet-4-20250514", temperature=0.0, max_tokens=800)
+        system_msg = (
+            "You are an expert security analyst performing artifact triage. "
+            "Identify file types, embedded payloads, suspicious patterns, IOCs, "
+            "and actionable next steps. Output strict JSON."
+        )
+        response = call_claude_messages(
+            [{"role": "system", "content": system_msg},
+             {"role": "user", "content": triage_prompt}],
+            model=os.environ.get("HACKAGENT_MODEL", "claude-sonnet-4-20250514"),
+            temperature=0.0,
+            max_tokens=4096,
+        )
         record_provenance(job_id, "triage", triage_prompt, response)
         print("Triage response written to logs.")
     else:
         # local echo fallback
-        fake = {"raw": json.dumps({"summary":"Local-echo fallback: no API key set","types_detected":["unknown"], "suggested_next_steps":[],"confidence":0.1})}
+        fake = {"raw": json.dumps({"summary": "Local-echo fallback: no API key set. Run 'python setup_api_key.py' to configure.", "types_detected": ["unknown"], "suggested_next_steps": ["Set ANTHROPIC_API_KEY"], "confidence": 0.1})}
         record_provenance(job_id, "triage", triage_prompt, fake)
-        print("No ANTHROPIC_API_KEY found; wrote echo to logs.")
+        print("No ANTHROPIC_API_KEY found; wrote echo to logs. Run 'python setup_api_key.py' to configure.")
 
 if __name__ == "__main__":
     run_job()

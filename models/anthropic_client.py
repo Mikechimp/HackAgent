@@ -7,22 +7,31 @@ except Exception:
 
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger("anthropic_client")
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
 _client = None
+
+
+def _get_api_key():
+    """Get API key, checking env var (which may have been loaded from .env)."""
+    return os.environ.get("ANTHROPIC_API_KEY")
+
 
 def _get_client():
     global _client
     if _client is None:
-        if not ANTHROPIC_KEY:
-            raise RuntimeError("No ANTHROPIC_API_KEY in environment")
+        api_key = _get_api_key()
+        if not api_key:
+            raise RuntimeError(
+                "No ANTHROPIC_API_KEY in environment. "
+                "Run 'python setup_api_key.py' or set the variable manually."
+            )
         if Anthropic is None:
             raise RuntimeError("anthropic SDK not installed")
-        _client = Anthropic(api_key=ANTHROPIC_KEY)
+        _client = Anthropic(api_key=api_key)
     return _client
 
-# Simple budget guard (very conservative)
+
 class Budget:
-    def __init__(self, tokens_per_day=200_000, requests_per_minute=12):
+    def __init__(self, tokens_per_day=2_000_000, requests_per_minute=30):
         self.tokens_per_day = tokens_per_day
         self.requests_per_minute = requests_per_minute
         self.reset_day = datetime.utcnow().date()
@@ -51,7 +60,8 @@ _DEFAULT_BUDGET = Budget()
 def scrub_for_api(text: str) -> str:
     if not text:
         return text
-    return text.replace(ANTHROPIC_KEY or "", "[REDACTED_API_KEY]")
+    api_key = _get_api_key()
+    return text.replace(api_key or "", "[REDACTED_API_KEY]")
 
 def call_claude_messages(messages, model="claude-sonnet-4-20250514", max_tokens=4000, temperature=0.0, budget=None, max_retries=3):
     """Call the Claude Messages API with budget guards and retries.
