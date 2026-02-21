@@ -472,6 +472,79 @@ if (kbSearch) {
     });
 }
 
+// ─── Extension Wizard ───
+
+// Tab switching
+document.querySelectorAll('.ext-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.ext-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.ext-method').forEach(m => m.classList.remove('active'));
+        tab.classList.add('active');
+        const method = document.getElementById('ext-method-' + tab.dataset.method);
+        if (method) method.classList.add('active');
+    });
+});
+
+// Copy-to-clipboard buttons
+document.querySelectorAll('.ext-copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const text = btn.dataset.copy;
+        navigator.clipboard.writeText(text).then(() => {
+            btn.classList.add('copied');
+            const origTitle = btn.title;
+            btn.title = 'Copied!';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.title = origTitle;
+            }, 2000);
+        });
+    });
+});
+
+// Download extension .xpi
+const extDownloadBtn = document.getElementById('ext-download-btn');
+if (extDownloadBtn) {
+    extDownloadBtn.addEventListener('click', async () => {
+        extDownloadBtn.disabled = true;
+        const origHTML = extDownloadBtn.innerHTML;
+        extDownloadBtn.innerHTML = '<span class="spinner"></span> Downloading...';
+
+        try {
+            const resp = await fetch(API_BASE + '/api/extension/download');
+            if (!resp.ok) {
+                let errMsg = 'Download failed';
+                try {
+                    const err = await resp.json();
+                    errMsg = err.error || errMsg;
+                } catch (_) {}
+                extDownloadBtn.innerHTML = origHTML;
+                extDownloadBtn.disabled = false;
+                alert(errMsg);
+                return;
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hackagent.xpi';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            extDownloadBtn.innerHTML = '&#10003; Downloaded!';
+            setTimeout(() => {
+                extDownloadBtn.innerHTML = origHTML;
+                extDownloadBtn.disabled = false;
+            }, 3000);
+        } catch (e) {
+            extDownloadBtn.innerHTML = origHTML;
+            extDownloadBtn.disabled = false;
+            alert('Download failed: ' + e.message);
+        }
+    });
+}
+
 // ─── Keyboard shortcuts ───
 document.addEventListener('keydown', (e) => {
     // Ctrl+K to focus chat input

@@ -847,51 +847,331 @@ html, body {
     margin-bottom: 16px;
 }
 
-.extension-steps {
-    list-style: none;
-    counter-reset: step;
+/* ─── Hero / Download Section ─── */
+.ext-hero-card {
+    text-align: center;
+    padding: 40px 24px 32px;
+    border-color: var(--border-gold);
+    background: linear-gradient(180deg, rgba(212, 168, 83, 0.04) 0%, var(--bg-card) 100%);
 }
 
-.extension-steps li {
-    counter-increment: step;
-    position: relative;
-    padding: 12px 0 12px 40px;
-    border-bottom: 1px solid var(--border-subtle);
+.ext-hero-icon {
+    color: var(--accent-gold);
+    margin-bottom: 16px;
+    animation: ext-float 3s ease-in-out infinite;
+}
+
+@keyframes ext-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.ext-hero-card h3 {
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.ext-hero-desc {
     font-size: 14px;
-    line-height: 1.6;
     color: var(--text-secondary);
+    margin-bottom: 28px;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
 }
 
-.extension-steps li:last-child { border-bottom: none; }
+.ext-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 36px;
+    background: linear-gradient(135deg, var(--accent-gold), var(--accent-amber));
+    color: var(--bg-deep);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.25s ease;
+}
 
-.extension-steps li::before {
-    content: counter(step);
-    position: absolute;
-    left: 0;
-    top: 12px;
-    width: 26px;
-    height: 26px;
+.ext-download-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 28px rgba(212, 168, 83, 0.35);
+}
+
+.ext-download-btn:active { transform: scale(0.98); }
+
+.ext-download-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+}
+
+.ext-download-btn .spinner {
+    border-color: rgba(10, 11, 15, 0.3);
+    border-top-color: var(--bg-deep);
+}
+
+.ext-download-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 14px;
+}
+
+/* ─── Install Tabs ─── */
+.ext-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+}
+
+.ext-tab {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ext-tab.active {
+    background: var(--accent-gold-glow);
+    color: var(--accent-gold-light);
+    border-color: var(--border-gold);
+}
+
+.ext-tab:hover:not(.active) { color: var(--text-primary); }
+
+/* ─── Method Panels ─── */
+.ext-method { display: none; }
+.ext-method.active { display: block; }
+
+/* ─── Wizard Steps ─── */
+.ext-steps {
+    display: flex;
+    flex-direction: column;
+}
+
+.ext-step {
+    display: flex;
+    gap: 16px;
+}
+
+.ext-step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ext-step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     background: var(--accent-gold-glow);
     border: 1px solid var(--border-gold);
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--accent-gold);
+    flex-shrink: 0;
 }
 
-.extension-steps code {
+.ext-step-num.done {
+    background: rgba(77, 216, 138, 0.15);
+    border-color: rgba(77, 216, 138, 0.3);
+    color: var(--accent-green);
+    font-size: 16px;
+}
+
+.ext-step-line {
+    width: 2px;
+    flex: 1;
+    background: var(--border-gold);
+    opacity: 0.3;
+    margin: 6px 0;
+    min-height: 16px;
+}
+
+.ext-step-body {
+    padding-bottom: 24px;
+}
+
+.ext-step-body h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.ext-step-body p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+.ext-step-body p:last-child { margin-bottom: 0; }
+
+.ext-step-body code {
     background: var(--bg-input);
     padding: 2px 8px;
     border-radius: 4px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--accent-teal);
 }
 
-/* Extension flow */
+.ext-step-body kbd {
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.ext-step-body strong { color: var(--accent-gold-light); }
+
+/* ─── URL Bar with Copy Button ─── */
+.ext-url-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    margin-top: 8px;
+}
+
+.ext-url-bar code {
+    background: none;
+    padding: 0;
+    font-size: 13px;
+}
+
+.ext-copy-btn {
+    background: none;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 4px 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ext-copy-btn:hover {
+    color: var(--accent-gold);
+    border-color: var(--border-gold);
+}
+
+.ext-copy-btn.copied {
+    color: var(--accent-green);
+    border-color: rgba(77, 216, 138, 0.4);
+}
+
+/* ─── Browser Mockup ─── */
+.ext-browser-mock {
+    margin-top: 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    max-width: 420px;
+}
+
+.ext-browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.ext-browser-dots {
+    display: flex;
+    gap: 5px;
+}
+
+.ext-browser-dots i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: 0.4;
+}
+
+.ext-browser-dots i:first-child { background: #e85d5d; opacity: 0.6; }
+.ext-browser-dots i:nth-child(2) { background: #d4a853; opacity: 0.6; }
+.ext-browser-dots i:last-child { background: #4dd88a; opacity: 0.6; }
+
+.ext-browser-url {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-teal);
+    background: var(--bg-deep);
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border-subtle);
+}
+
+/* ─── Mock Button ─── */
+.ext-mock-btn-area {
+    margin-top: 10px;
+}
+
+.ext-mock-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    background: var(--bg-input);
+    border: 1px dashed var(--border-gold);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: default;
+    animation: ext-pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes ext-pulse-border {
+    0%, 100% { border-color: var(--border-gold); opacity: 0.7; }
+    50% { border-color: var(--accent-gold); opacity: 1; }
+}
+
+/* ─── Note Box ─── */
+.ext-note {
+    margin-top: 20px;
+    padding: 12px 16px;
+    background: rgba(212, 168, 83, 0.06);
+    border: 1px solid var(--border-gold);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.ext-note strong { color: var(--accent-gold); }
+
+/* ─── Extension Flow ─── */
 .extension-flow {
     display: flex;
     align-items: center;
@@ -921,6 +1201,7 @@ html, body {
     font-size: 20px;
 }
 
+/* ─── Extension Status ─── */
 .extension-status {
     padding: 12px;
     background: var(--bg-input);

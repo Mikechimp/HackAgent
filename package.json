@@ -9,8 +9,9 @@
     "start": "npm run build && npx electron .",
     "predev": "npm run build",
     "dev": "npx concurrently -k -p [{name}] -n TSC,COPY,ELECTRON -c blue,yellow,green \"npx tsc -w --preserveWatchOutput\" \"npx nodemon -w src/renderer -e html,js,css --exec npm run copy-renderer\" \"npx electron . --dev\"",
-    "package": "npm run build && npx electron-builder --dir",
-    "make": "npm run build && npx electron-builder"
+    "build:extension": "npx web-ext build --source-dir=firefox_extension --artifacts-dir=dist/extension --overwrite-dest --filename=hackagent.xpi",
+    "package": "npm run build && npm run build:extension && npx electron-builder --dir",
+    "make": "npm run build && npm run build:extension && npx electron-builder"
   },
   "author": "Mikechimp",
   "license": "MIT",
@@ -23,7 +24,8 @@
     "electron-builder": "^24.9.1",
     "nodemon": "^3.1.14",
     "shx": "^0.4.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "web-ext": "^9.3.0"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",

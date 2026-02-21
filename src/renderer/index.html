@@ -297,59 +297,215 @@
                 <div class="panel-header">
                     <div class="panel-title-area">
                         <h2>Firefox Extension</h2>
-                        <p class="panel-subtitle">Live page capture and security analysis from your browser</p>
+                        <p class="panel-subtitle">One-click page capture and security analysis from your browser</p>
                     </div>
                     <div class="ornament-divider"></div>
                 </div>
 
                 <div class="extension-container">
-                    <div class="extension-card">
-                        <h3>Installation</h3>
-                        <ol class="extension-steps">
-                            <li>
-                                <strong>Navigate to the extension folder:</strong>
-                                <code>cd firefox_extension/</code>
-                            </li>
-                            <li>
-                                <strong>Open Firefox and go to:</strong>
-                                <code>about:debugging#/runtime/this-firefox</code>
-                            </li>
-                            <li>
-                                <strong>Click "Load Temporary Add-on"</strong> and select <code>manifest.json</code> from the <code>firefox_extension/</code> folder
-                            </li>
-                            <li>
-                                <strong>The HackAgent icon will appear in your toolbar</strong> — click it on any page to analyze
-                            </li>
-                        </ol>
+                    <!-- Hero / Download Section -->
+                    <div class="extension-card ext-hero-card">
+                        <div class="ext-hero-icon">
+                            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+                                <rect x="8" y="4" width="48" height="56" rx="4" stroke="currentColor" stroke-width="2"/>
+                                <path d="M32 20v16M24 28l8 8 8-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M20 44h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+                            </svg>
+                        </div>
+                        <h3>HackAgent Browser Extension</h3>
+                        <p class="ext-hero-desc">Capture and analyze any web page for security vulnerabilities directly from your Firefox toolbar</p>
+                        <button id="ext-download-btn" class="ext-download-btn">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M10 3v10M6 9l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M3 14v2a1 1 0 001 1h12a1 1 0 001-1v-2" stroke-linecap="round"/>
+                            </svg>
+                            Download Extension
+                        </button>
+                        <p class="ext-download-meta">hackagent.xpi &middot; v1.0.0 &middot; Firefox 57+</p>
                     </div>
 
+                    <!-- Installation Wizard -->
                     <div class="extension-card">
-                        <h3>How It Works</h3>
-                        <div class="extension-flow">
-                            <div class="flow-step">
-                                <div class="flow-icon">🌐</div>
-                                <p>Browse to any web page</p>
+                        <h3>Installation Guide</h3>
+                        <div class="ext-tabs">
+                            <button class="ext-tab active" data-method="quick">Quick Setup</button>
+                            <button class="ext-tab" data-method="permanent">Permanent Install</button>
+                        </div>
+
+                        <!-- Quick Setup Method -->
+                        <div class="ext-method active" id="ext-method-quick">
+                            <div class="ext-steps">
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num">1</span>
+                                        <span class="ext-step-line"></span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Download the extension</h4>
+                                        <p>Click the <strong>Download Extension</strong> button above to save the .xpi file</p>
+                                    </div>
+                                </div>
+
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num">2</span>
+                                        <span class="ext-step-line"></span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Open Firefox debugging page</h4>
+                                        <p>Copy this address and paste it into Firefox's address bar:</p>
+                                        <div class="ext-url-bar">
+                                            <code>about:debugging#/runtime/this-firefox</code>
+                                            <button class="ext-copy-btn" data-copy="about:debugging#/runtime/this-firefox" title="Copy to clipboard">
+                                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                                    <rect x="6" y="6" width="11" height="11" rx="2"/>
+                                                    <path d="M4 14V4a2 2 0 012-2h10"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <!-- Visual: mock browser bar -->
+                                        <div class="ext-browser-mock">
+                                            <div class="ext-browser-bar">
+                                                <span class="ext-browser-dots"><i></i><i></i><i></i></span>
+                                                <span class="ext-browser-url">about:debugging#/runtime/this-firefox</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num">3</span>
+                                        <span class="ext-step-line"></span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Load the extension</h4>
+                                        <p>Click <strong>"Load Temporary Add-on..."</strong> and select the downloaded <code>hackagent.xpi</code> file</p>
+                                        <div class="ext-mock-btn-area">
+                                            <span class="ext-mock-btn">Load Temporary Add-on...</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num done">&#10003;</span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>You're all set!</h4>
+                                        <p>The HackAgent icon appears in your Firefox toolbar. Click it on any page to start analyzing.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-step">
-                                <div class="flow-icon">🦊</div>
-                                <p>Click the HackAgent extension icon</p>
+
+                            <div class="ext-note">
+                                <strong>Note:</strong> This loads the extension for your current Firefox session. You'll need to reload it after restarting Firefox.
                             </div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-step">
-                                <div class="flow-icon">🔍</div>
-                                <p>Page content captured and sent</p>
+                        </div>
+
+                        <!-- Permanent Install Method -->
+                        <div class="ext-method" id="ext-method-permanent">
+                            <div class="ext-steps">
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num">1</span>
+                                        <span class="ext-step-line"></span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Use Firefox Developer Edition</h4>
+                                        <p>Download <strong>Firefox Developer Edition</strong> or <strong>Firefox Nightly</strong> which allow unsigned extensions</p>
+                                        <div class="ext-url-bar">
+                                            <code>mozilla.org/firefox/developer</code>
+                                            <button class="ext-copy-btn" data-copy="https://www.mozilla.org/firefox/developer/" title="Copy URL">
+                                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                                    <rect x="6" y="6" width="11" height="11" rx="2"/>
+                                                    <path d="M4 14V4a2 2 0 012-2h10"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num">2</span>
+                                        <span class="ext-step-line"></span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Disable signature enforcement</h4>
+                                        <p>In the address bar, go to:</p>
+                                        <div class="ext-url-bar">
+                                            <code>about:config</code>
+                                            <button class="ext-copy-btn" data-copy="about:config" title="Copy to clipboard">
+                                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                                    <rect x="6" y="6" width="11" height="11" rx="2"/>
+                                                    <path d="M4 14V4a2 2 0 012-2h10"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <p style="margin-top:8px;">Search for <code>xpinstall.signatures.required</code> and set it to <strong>false</strong></p>
+                                    </div>
+                                </div>
+
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num">3</span>
+                                        <span class="ext-step-line"></span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Install the extension file</h4>
+                                        <p>Go to <code>about:addons</code> (or press <kbd>Ctrl+Shift+A</kbd>)</p>
+                                        <p>Click the gear icon &#9881; &rarr; <strong>"Install Add-on From File..."</strong></p>
+                                        <p>Select the downloaded <code>hackagent.xpi</code></p>
+                                    </div>
+                                </div>
+
+                                <div class="ext-step">
+                                    <div class="ext-step-indicator">
+                                        <span class="ext-step-num done">&#10003;</span>
+                                    </div>
+                                    <div class="ext-step-body">
+                                        <h4>Permanently installed!</h4>
+                                        <p>The extension persists across browser restarts. No need to reload.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-step">
-                                <div class="flow-icon">🤖</div>
-                                <p>AI analyzes for vulnerabilities</p>
+
+                            <div class="ext-note">
+                                <strong>Requires:</strong> Firefox Developer Edition or Nightly. Standard Firefox requires extensions to be signed by Mozilla.
                             </div>
                         </div>
                     </div>
 
+                    <!-- How It Works -->
                     <div class="extension-card">
-                        <h3>Backend Status</h3>
+                        <h3>How It Works</h3>
+                        <div class="extension-flow">
+                            <div class="flow-step">
+                                <div class="flow-icon">&#127760;</div>
+                                <p>Browse to any page</p>
+                            </div>
+                            <div class="flow-arrow">&rarr;</div>
+                            <div class="flow-step">
+                                <div class="flow-icon">&#129418;</div>
+                                <p>Click HackAgent icon</p>
+                            </div>
+                            <div class="flow-arrow">&rarr;</div>
+                            <div class="flow-step">
+                                <div class="flow-icon">&#128269;</div>
+                                <p>Page data captured</p>
+                            </div>
+                            <div class="flow-arrow">&rarr;</div>
+                            <div class="flow-step">
+                                <div class="flow-icon">&#129302;</div>
+                                <p>AI analyzes threats</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Backend Status -->
+                    <div class="extension-card">
+                        <h3>Backend Connection</h3>
                         <div class="extension-status" id="extension-status">
                             <p>Checking connection...</p>
                         </div>

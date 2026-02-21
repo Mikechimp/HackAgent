@@ -240,6 +240,16 @@ app.get('/api/knowledge-base', (_req, res) => {
   });
 });
 
+app.get('/api/extension/download', (_req, res) => {
+  const xpiPath = path.join(__dirname, '..', 'extension', 'hackagent.xpi');
+  if (!fs.existsSync(xpiPath)) {
+    return res.status(404).json({
+      error: 'Extension not built. Run: npm run build:extension',
+    });
+  }
+  res.download(xpiPath, 'hackagent.xpi');
+});
+
 app.get('/api/default-creds', (req, res) => {
   const query = ((req.query.q as string) || '').toLowerCase();
   const results: Record<string, any> = {};
