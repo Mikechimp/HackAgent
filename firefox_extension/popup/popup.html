@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <header class="popup-header">
+            <div class="popup-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <h1>HackAgent</h1>
+            </div>
+            <span class="popup-version">v1.0</span>
+        </header>
+
+        <div class="popup-status" id="status">
+            <span class="status-dot"></span>
+            <span id="status-text">Checking...</span>
+        </div>
+
+        <div class="popup-actions">
+            <button id="btn-analyze" class="popup-btn primary" disabled>
+                <span class="btn-icon">🔍</span>
+                <span class="btn-label">Analyze This Page</span>
+            </button>
+            <button id="btn-screenshot" class="popup-btn secondary" disabled>
+                <span class="btn-icon">📸</span>
+                <span class="btn-label">Capture & Analyze</span>
+            </button>
+        </div>
+
+        <div id="results" class="popup-results" style="display: none;">
+            <div class="results-header">
+                <h3>Analysis Results</h3>
+                <button id="btn-open-full" class="link-btn">Open in HackAgent</button>
+            </div>
+            <div id="results-content" class="results-content">
+            </div>
+        </div>
+
+        <div id="loading" class="popup-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Analyzing page for vulnerabilities...</p>
+        </div>
+
+        <footer class="popup-footer">
+            <div class="ornamental-line"></div>
+            <p>Authorized testing only</p>
+        </footer>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

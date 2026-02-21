@@ -8,4 +8,4 @@ build/
 .venv/
 logs/
 .env
-data/
+data/submit.json

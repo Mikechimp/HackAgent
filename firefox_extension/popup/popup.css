@@ -1,0 +1,238 @@
+/* HackAgent Firefox Extension — Arabic-Inspired Dark Theme */
+
+:root {
+    --bg-deep: #0a0b0f;
+    --bg-primary: #0f1117;
+    --bg-card: #1a1d2b;
+    --bg-input: #12141e;
+    --accent-gold: #d4a853;
+    --accent-gold-light: #e8c674;
+    --accent-gold-dim: #a07d3a;
+    --accent-gold-glow: rgba(212, 168, 83, 0.15);
+    --accent-teal: #3dd8c5;
+    --accent-red: #e85d5d;
+    --accent-green: #4dd88a;
+    --text-primary: #e8e4dc;
+    --text-secondary: #9b978f;
+    --text-muted: #6b6860;
+    --border-subtle: rgba(212, 168, 83, 0.08);
+    --border-gold: rgba(212, 168, 83, 0.25);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    width: 380px;
+    min-height: 200px;
+    max-height: 600px;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    overflow-y: auto;
+}
+
+.popup-container {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Header */
+.popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.popup-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.popup-logo svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-gold);
+}
+
+.popup-logo h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent-gold-light);
+    letter-spacing: 0.5px;
+}
+
+.popup-version {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* Status */
+.popup-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.status-dot.online {
+    background: var(--accent-green);
+    box-shadow: 0 0 6px rgba(77, 216, 138, 0.5);
+}
+
+.status-dot.offline {
+    background: var(--accent-red);
+}
+
+#status-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Actions */
+.popup-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.popup-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--border-gold);
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.popup-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.popup-btn.primary {
+    background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dim));
+    color: var(--bg-deep);
+    font-weight: 700;
+    border: none;
+}
+
+.popup-btn.primary:hover:not(:disabled) {
+    box-shadow: 0 0 16px var(--accent-gold-glow);
+}
+
+.popup-btn.secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.popup-btn.secondary:hover:not(:disabled) {
+    background: rgba(212, 168, 83, 0.1);
+}
+
+.btn-icon { font-size: 16px; }
+
+/* Results */
+.popup-results {
+    background: var(--bg-card);
+    border: 1px solid var(--border-gold);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--accent-gold-glow);
+}
+
+.results-header h3 {
+    font-size: 13px;
+    color: var(--accent-gold-light);
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: var(--accent-teal);
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: inherit;
+}
+
+.results-content {
+    padding: 12px 14px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+}
+
+/* Loading */
+.popup-loading {
+    text-align: center;
+    padding: 24px;
+}
+
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border-subtle);
+    border-top-color: var(--accent-gold);
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.popup-loading p {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Footer */
+.popup-footer {
+    text-align: center;
+}
+
+.ornamental-line {
+    height: 1px;
+    margin-bottom: 8px;
+    background: linear-gradient(to right, transparent, var(--accent-gold-dim), transparent);
+    opacity: 0.3;
+}
+
+.popup-footer p {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}

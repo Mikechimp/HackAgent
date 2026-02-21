@@ -1,0 +1,252 @@
+{
+  "source": "jhaddix/devops-attack-surface",
+  "description": "DevOps attack surface knowledge base from Jason Haddix",
+  "categories": {
+    "knowledge_bases": {
+      "tools": {
+        "SharePoint": {
+          "attack_vectors": ["RCE via CVE-2025-53770", "JWT spoofing", ".aspx shell deployment", "CVE-2025-49706 privilege escalation"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2025-53770", "CVE-2025-49706", "CVE-2025-49704"]
+        },
+        "Confluence": {
+          "attack_vectors": ["OGNL injection pre-auth RCE", "privilege escalation", "template injection"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2023-22527"]
+        },
+        "MediaWiki": {
+          "attack_vectors": ["version enumeration", "XSS", "SQL injection", "file upload bypass"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "Notion": {
+          "attack_vectors": ["public page enumeration", "API token extraction", "leaked workspace URLs"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "Wiki.js": {
+          "attack_vectors": ["template injection RCE", "auth bypass"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2024-34710", "CVE-2022-1681"]
+        }
+      }
+    },
+    "source_code_management": {
+      "tools": {
+        "Git": {
+          "attack_vectors": ["exposed .git directories", "secret scanning with truffleHog/GitLeaks", "credential recovery from history"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "GitHub": {
+          "attack_vectors": ["GitHub dorking", "pull_request_target workflow RCE", "PAT/SSH key theft", "Actions secrets extraction"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "GitLab": {
+          "attack_vectors": ["SAML auth bypass", "RCE via Ruby graphql", "pre-auth RCE via ExifTool", "runner token abuse"],
+          "default_creds": [{"user": "root", "pass": "5iveL!fe"}],
+          "critical_cves": ["CVE-2025-25291", "CVE-2025-25292", "CVE-2025-27407", "CVE-2021-22205"]
+        },
+        "Bitbucket": {
+          "attack_vectors": ["command injection", "path traversal", "webhook manipulation"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2022-36804", "CVE-2022-43401"]
+        },
+        "Azure DevOps": {
+          "attack_vectors": ["privilege escalation", "RCE with Queue Build permissions", "pipeline manipulation"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2025-29813"]
+        }
+      }
+    },
+    "build_servers": {
+      "tools": {
+        "Jenkins": {
+          "attack_vectors": ["arbitrary file leak to RCE", "Groovy console RCE", "plugin vulnerabilities", "credential extraction"],
+          "default_creds": [{"user": "admin", "pass": "admin"}, {"user": "admin", "pass": "password"}],
+          "critical_cves": ["CVE-2024-23897"]
+        },
+        "TeamCity": {
+          "attack_vectors": ["auth bypass to RCE", "path traversal", "credential theft"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2024-27198"]
+        },
+        "CircleCI": {
+          "attack_vectors": ["token theft from 2023 breach", "environment variable extraction"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "GitHub Actions": {
+          "attack_vectors": ["workflow injection", "secrets extraction", "self-hosted runner compromise"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "Bamboo": {
+          "attack_vectors": ["SQL injection", "Apache ActiveMQ RCE"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2024-1597"]
+        }
+      }
+    },
+    "secrets_managers": {
+      "tools": {
+        "HashiCorp Vault": {
+          "attack_vectors": ["audit logging RCE", "root policy privilege escalation", "MFA bypass", "14+ CVEs"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2025-6000", "CVE-2025-5999"]
+        },
+        "AWS Secrets Manager": {
+          "attack_vectors": ["IAM role abuse", "Lambda rotation compromise", "deleted secret recovery"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "Azure Key Vault": {
+          "attack_vectors": ["managed identity exploitation", "access policy misconfiguration"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "CyberArk": {
+          "attack_vectors": ["Vault/CPM/PSM compromise", "session hijacking", "Safe credential extraction"],
+          "default_creds": [],
+          "critical_cves": []
+        }
+      }
+    },
+    "infrastructure_as_code": {
+      "tools": {
+        "Terraform": {
+          "attack_vectors": ["terraform.tfstate extraction (contains creds)", "hard-coded secrets in HCL", "remote state compromise"],
+          "default_creds": [],
+          "critical_cves": []
+        },
+        "AWS CloudFormation": {
+          "attack_vectors": ["template parameter secrets", "IAM role credential extraction"],
+          "default_creds": [],
+          "critical_cves": []
+        }
+      }
+    },
+    "monitoring": {
+      "tools": {
+        "Splunk": {
+          "attack_vectors": ["RCE via file upload", "forwarder compromise", "default credentials"],
+          "default_creds": [{"user": "admin", "pass": "changeme"}],
+          "critical_cves": ["CVE-2025-20229"]
+        },
+        "Grafana": {
+          "attack_vectors": ["XSS to SSRF", "account takeover", "data source credential extraction"],
+          "default_creds": [{"user": "admin", "pass": "admin"}],
+          "critical_cves": ["CVE-2025-4123"]
+        },
+        "Elastic/ELK": {
+          "attack_vectors": ["Kibana RCE via prototype tainting", "unauthenticated Elasticsearch access"],
+          "default_creds": [{"user": "elastic", "pass": "changeme"}],
+          "critical_cves": ["CVE-2024-37287"]
+        }
+      }
+    },
+    "config_management": {
+      "tools": {
+        "Ansible": {
+          "attack_vectors": ["privilege escalation via tower OAuth2", "Vault password cracking", "inventory enumeration"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2023-21769"]
+        },
+        "Chef": {
+          "attack_vectors": ["InSpec policy RCE", "data bag decryption", "chef server API compromise"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2023-42658"]
+        },
+        "Puppet": {
+          "attack_vectors": ["privilege escalation RCE", "manifest credential extraction", "certificate theft"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2023-2530"]
+        },
+        "Salt": {
+          "attack_vectors": ["RCE via minion key", "event bus auth bypass", "pillar data extraction"],
+          "default_creds": [],
+          "critical_cves": ["CVE-2025-22237"]
+        }
+      }
+    },
+    "repository_management": {
+      "tools": {
+        "Artifactory": {
+          "attack_vectors": ["auth bypass to privilege escalation", "insecure deserialization RCE"],
+          "default_creds": [{"user": "admin", "pass": "password"}],
+          "critical_cves": ["CVE-2022-0668"]
+        },
+        "Nexus": {
+          "attack_vectors": ["RCE via malicious Maven artifact", "path traversal", "default credentials"],
+          "default_creds": [{"user": "admin", "pass": "admin123"}],
+          "critical_cves": ["CVE-2024-5082"]
+        }
+      }
+    }
+  },
+  "default_credentials": {
+    "databases": {
+      "PostgreSQL": [{"user": "postgres", "pass": "postgres"}, {"user": "postgres", "pass": "password"}],
+      "MySQL": [{"user": "root", "pass": ""}, {"user": "mysql", "pass": "mysql"}],
+      "MongoDB": [{"user": "admin", "pass": ""}, {"user": "admin", "pass": "admin"}],
+      "Redis": [{"user": "", "pass": ""}, {"user": "", "pass": "redis"}],
+      "MSSQL": [{"user": "sa", "pass": ""}, {"user": "sa", "pass": "Password1"}],
+      "Elasticsearch": [{"user": "elastic", "pass": "changeme"}],
+      "CouchDB": [{"user": "admin", "pass": ""}, {"user": "admin", "pass": "admin"}],
+      "Cassandra": [{"user": "cassandra", "pass": "cassandra"}]
+    },
+    "web_apps": {
+      "WordPress": [{"user": "admin", "pass": "admin"}, {"user": "admin", "pass": "password"}],
+      "Joomla": [{"user": "admin", "pass": "admin"}],
+      "Drupal": [{"user": "admin", "pass": "admin"}],
+      "Jenkins": [{"user": "admin", "pass": "admin"}, {"user": "admin", "pass": "password"}],
+      "GitLab": [{"user": "root", "pass": "5iveL!fe"}],
+      "Grafana": [{"user": "admin", "pass": "admin"}],
+      "Tomcat": [{"user": "admin", "pass": "admin"}, {"user": "tomcat", "pass": "tomcat"}],
+      "JBoss": [{"user": "admin", "pass": "admin"}]
+    },
+    "network_devices": {
+      "Cisco": [{"user": "admin", "pass": "admin"}, {"user": "cisco", "pass": "cisco"}],
+      "Juniper": [{"user": "root", "pass": ""}, {"user": "admin", "pass": "netscreen"}],
+      "Dell iDRAC": [{"user": "root", "pass": "calvin"}],
+      "FortiGate": [{"user": "admin", "pass": ""}],
+      "Palo Alto": [{"user": "admin", "pass": "admin"}],
+      "MikroTik": [{"user": "admin", "pass": ""}]
+    },
+    "virtualization": {
+      "VMware ESXi": [{"user": "root", "pass": "vmware"}],
+      "Proxmox": [{"user": "root", "pass": ""}],
+      "Docker Registry": [{"user": "admin", "pass": "admin"}]
+    },
+    "app_servers": {
+      "WebLogic": [{"user": "weblogic", "pass": "weblogic"}],
+      "WebSphere": [{"user": "admin", "pass": "admin"}],
+      "ActiveMQ": [{"user": "admin", "pass": "admin"}],
+      "RabbitMQ": [{"user": "guest", "pass": "guest"}]
+    }
+  },
+  "common_vulnerability_patterns": {
+    "owasp_top_10": [
+      "A01:2021 - Broken Access Control",
+      "A02:2021 - Cryptographic Failures",
+      "A03:2021 - Injection (SQL, NoSQL, OS, LDAP)",
+      "A04:2021 - Insecure Design",
+      "A05:2021 - Security Misconfiguration",
+      "A06:2021 - Vulnerable and Outdated Components",
+      "A07:2021 - Identification and Authentication Failures",
+      "A08:2021 - Software and Data Integrity Failures",
+      "A09:2021 - Security Logging and Monitoring Failures",
+      "A10:2021 - Server-Side Request Forgery (SSRF)"
+    ],
+    "web_vuln_signatures": {
+      "xss": ["<script>", "onerror=", "onload=", "javascript:", "eval(", "document.write("],
+      "sqli": ["' OR 1=1", "UNION SELECT", "'; DROP", "1; WAITFOR"],
+      "ssrf": ["169.254.169.254", "metadata.google.internal", "localhost", "127.0.0.1"],
+      "path_traversal": ["../", "..\\", "%2e%2e/", "%252e%252e/"],
+      "rce": ["exec(", "system(", "passthru(", "shell_exec(", "popen("],
+      "lfi": ["/etc/passwd", "/etc/shadow", "proc/self/environ", "win.ini"],
+      "info_disclosure": ["phpinfo()", "server-status", "server-info", ".env", ".git/config"]
+    }
+  }
+}
