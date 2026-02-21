@@ -6,10 +6,12 @@ import yaml
 from models.anthropic_client import call_claude_messages
 from jsonschema import validate, ValidationError
 
-ROOT = Path('/app')
-LOG_DIR = Path('/app/logs')
-DATA_DIR = Path('/app/data')
-POLICIES_DIR = Path('/app/policies') if Path('/app/policies').exists() else Path('/app/workers')
+# Auto-detect project root: /app in Docker, otherwise parent of this file's directory
+_DOCKER_ROOT = Path('/app')
+ROOT = _DOCKER_ROOT if _DOCKER_ROOT.exists() and (_DOCKER_ROOT / 'workers').exists() else Path(__file__).resolve().parent.parent
+LOG_DIR = ROOT / 'logs'
+DATA_DIR = ROOT / 'data'
+POLICIES_DIR = ROOT / 'policies' if (ROOT / 'policies').exists() else ROOT / 'workers'
 
 # load safety rules
 SAFETY = yaml.safe_load((POLICIES_DIR / 'safety_rules.yaml').read_text())
