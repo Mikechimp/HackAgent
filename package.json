@@ -8,7 +8,7 @@
     "copy-renderer": "shx mkdir -p dist/renderer/styles && shx cp src/renderer/index.html dist/renderer/ && shx cp src/renderer/app.js dist/renderer/ && shx cp src/renderer/styles/style.css dist/renderer/styles/",
     "start": "npm run build && electron .",
     "predev": "npm run build",
-    "dev": "concurrently -k -p [{name}] -n TSC,COPY,ELECTRON -c blue,yellow,green \"tsc -w --preserveWatchOutput\" \"nodemon -w src/renderer -e html,js,css --exec npm run copy-renderer\" \"electron . --dev\"",
+    "dev": "npx concurrently -k -p [{name}] -n TSC,COPY,ELECTRON -c blue,yellow,green \"tsc -w --preserveWatchOutput\" \"nodemon -w src/renderer -e html,js,css --exec npm run copy-renderer\" \"electron . --dev\"",
     "package": "npm run build && electron-builder --dir",
     "make": "npm run build && electron-builder"
   },
