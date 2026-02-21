@@ -4,13 +4,13 @@
   "description": "HackAgent — AI Security Analyst Desktop Application",
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc && npm run copy-renderer",
-    "copy-renderer": "shx mkdir -p dist/renderer/styles && shx cp src/renderer/index.html dist/renderer/ && shx cp src/renderer/app.js dist/renderer/ && shx cp src/renderer/styles/style.css dist/renderer/styles/",
-    "start": "npm run build && electron .",
+    "build": "npx tsc && npm run copy-renderer",
+    "copy-renderer": "npx shx mkdir -p dist/renderer/styles && npx shx cp src/renderer/index.html dist/renderer/ && npx shx cp src/renderer/app.js dist/renderer/ && npx shx cp src/renderer/styles/style.css dist/renderer/styles/",
+    "start": "npm run build && npx electron .",
     "predev": "npm run build",
-    "dev": "npx concurrently -k -p [{name}] -n TSC,COPY,ELECTRON -c blue,yellow,green \"tsc -w --preserveWatchOutput\" \"nodemon -w src/renderer -e html,js,css --exec npm run copy-renderer\" \"electron . --dev\"",
-    "package": "npm run build && electron-builder --dir",
-    "make": "npm run build && electron-builder"
+    "dev": "npx concurrently -k -p [{name}] -n TSC,COPY,ELECTRON -c blue,yellow,green \"npx tsc -w --preserveWatchOutput\" \"npx nodemon -w src/renderer -e html,js,css --exec npm run copy-renderer\" \"npx electron . --dev\"",
+    "package": "npm run build && npx electron-builder --dir",
+    "make": "npm run build && npx electron-builder"
   },
   "author": "Mikechimp",
   "license": "MIT",
