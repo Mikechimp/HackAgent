@@ -24,17 +24,25 @@ def _get_api_key():
     return os.environ.get("OPENAI_API_KEY")
 
 
+def _is_placeholder_key(key):
+    """Check if the API key is a placeholder from .env.example."""
+    return not key or key.startswith("sk-proj-your")
+
+
 def _get_client():
     global _client
     if _client is None:
         api_key = _get_api_key()
-        if not api_key:
+        if _is_placeholder_key(api_key):
             raise RuntimeError(
-                "No OPENAI_API_KEY in environment. "
-                "Add it to your .env file or set the variable manually."
+                "No OpenAI API key configured. "
+                "Set OPENAI_API_KEY in your .env file with a real key from "
+                "https://platform.openai.com/api-keys"
             )
         if OpenAI is None:
-            raise RuntimeError("openai SDK not installed: pip install openai")
+            raise RuntimeError(
+                "openai SDK not installed. Run: pip install openai"
+            )
         _client = OpenAI(api_key=api_key)
     return _client
 
@@ -123,7 +131,7 @@ def call_chatgpt(messages, model="gpt-4o", max_tokens=4096,
     backoff = 1.0
     last_err = None
 
-    while attempt <= max_retries:
+    while attempt < max_retries:
         attempt += 1
         try:
             now = time.time()
@@ -148,11 +156,12 @@ def call_chatgpt(messages, model="gpt-4o", max_tokens=4096,
 
         except Exception as e:
             last_err = e
-            LOG.warning(f"ChatGPT call error (attempt {attempt}): {e}")
-            time.sleep(backoff)
-            backoff *= 2.0
+            LOG.warning(f"ChatGPT call error (attempt {attempt}/{max_retries}): {e}")
+            if attempt < max_retries:
+                time.sleep(backoff)
+                backoff *= 2.0
 
-    raise RuntimeError(f"ChatGPT API failed after {max_retries} attempts: last_err={last_err}")
+    raise RuntimeError(f"ChatGPT API failed after {max_retries} attempts: {last_err}")
 
 
 def chat_with_hackagent(user_message, conversation_history=None, model="gpt-4o"):

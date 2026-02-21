@@ -30,6 +30,8 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ─── Status Check ───
+let apiConfigured = false;
+
 async function checkStatus() {
     const dot = document.querySelector('.status-dot');
     const text = document.querySelector('.status-text');
@@ -40,15 +42,30 @@ async function checkStatus() {
         const data = await resp.json();
 
         if (data.status === 'online') {
+            apiConfigured = data.api_configured;
             dot.classList.add('online');
             text.textContent = data.api_configured ? 'Online — API Connected' : 'Online — No API Key';
             text.style.color = data.api_configured ? '#4dd88a' : '#d4a853';
+
+            // Show a warning in chat if API key is missing (once)
+            if (!data.api_configured && !window._apiWarningShown) {
+                window._apiWarningShown = true;
+                appendMessage('assistant',
+                    '**Warning: No OpenAI API key configured.**\n\n' +
+                    'Chat and analysis features will not work until you add your API key.\n\n' +
+                    'To fix this:\n' +
+                    '1. Open the `.env` file in the project root\n' +
+                    '2. Set `OPENAI_API_KEY=sk-proj-your-real-key`\n' +
+                    '3. Restart the server\n\n' +
+                    'Get a key at: https://platform.openai.com/api-keys'
+                );
+            }
 
             if (extStatus) {
                 extStatus.className = 'extension-status online';
                 extStatus.innerHTML = `
                     <p style="color: #4dd88a; font-weight: 600;">Backend Online</p>
-                    <p>API: ${data.api_configured ? 'Configured' : 'Not configured'}</p>
+                    <p>API: ${data.api_configured ? 'Configured' : 'Not configured — set OPENAI_API_KEY in .env'}</p>
                     <p>Extension endpoint: <code style="color: #3dd8c5;">${API_BASE}/api/analyze-page</code></p>
                 `;
             }
@@ -60,7 +77,7 @@ async function checkStatus() {
 
         if (extStatus) {
             extStatus.className = 'extension-status offline';
-            extStatus.innerHTML = '<p style="color: #e85d5d;">Backend offline — start with: python web/app.py</p>';
+            extStatus.innerHTML = '<p style="color: #e85d5d;">Backend offline — start with: python run_web.py</p>';
         }
     }
 }

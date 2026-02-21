@@ -21,11 +21,14 @@ def _get_client():
         api_key = _get_api_key()
         if not api_key:
             raise RuntimeError(
-                "No ANTHROPIC_API_KEY in environment. "
-                "Run 'python setup_api_key.py' or set the variable manually."
+                "No ANTHROPIC_API_KEY configured. "
+                "Set ANTHROPIC_API_KEY in your .env file with a real key from "
+                "https://console.anthropic.com/settings/keys"
             )
         if Anthropic is None:
-            raise RuntimeError("anthropic SDK not installed")
+            raise RuntimeError(
+                "anthropic SDK not installed. Run: pip install anthropic"
+            )
         _client = Anthropic(api_key=api_key)
     return _client
 
@@ -61,7 +64,9 @@ def scrub_for_api(text: str) -> str:
     if not text:
         return text
     api_key = _get_api_key()
-    return text.replace(api_key or "", "[REDACTED_API_KEY]")
+    if api_key:
+        return text.replace(api_key, "[REDACTED_API_KEY]")
+    return text
 
 def call_claude_messages(messages, model="claude-sonnet-4-20250514", max_tokens=4000, temperature=0.0, budget=None, max_retries=3):
     """Call the Claude Messages API with budget guards and retries.
@@ -98,7 +103,7 @@ def call_claude_messages(messages, model="claude-sonnet-4-20250514", max_tokens=
     attempt = 0
     backoff = 1.0
     last_err = None
-    while attempt <= max_retries:
+    while attempt < max_retries:
         attempt += 1
         try:
             now = time.time()
@@ -130,7 +135,8 @@ def call_claude_messages(messages, model="claude-sonnet-4-20250514", max_tokens=
             return {"raw": raw, "raw_text": raw, "tokens_estimated": actual, "meta": meta}
         except Exception as e:
             last_err = e
-            LOG.warning(f"Claude call error (attempt {attempt}): {e}")
-            time.sleep(backoff)
-            backoff *= 2.0
-    raise RuntimeError(f"Claude API failed after {max_retries} attempts: last_err={last_err}")
+            LOG.warning(f"Claude call error (attempt {attempt}/{max_retries}): {e}")
+            if attempt < max_retries:
+                time.sleep(backoff)
+                backoff *= 2.0
+    raise RuntimeError(f"Claude API failed after {max_retries} attempts: {last_err}")
