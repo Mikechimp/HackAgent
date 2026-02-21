@@ -6,6 +6,8 @@ const API_BASE = window.location.origin;
 let sessionId = 'session-' + Date.now();
 
 // ─── DOM Elements ───
+const setupOverlay = document.getElementById('setup-overlay');
+const appContainer = document.getElementById('app-container');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const chatSend = document.getElementById('chat-send');
@@ -29,8 +31,18 @@ document.querySelectorAll('.nav-item').forEach(item => {
     });
 });
 
-// ─── Status Check ───
+// ─── Status Check & Setup Screen ───
 let apiConfigured = false;
+
+function showSetup() {
+    setupOverlay.style.display = 'flex';
+    appContainer.style.display = 'none';
+}
+
+function showApp() {
+    setupOverlay.style.display = 'none';
+    appContainer.style.display = '';
+}
 
 async function checkStatus() {
     const dot = document.querySelector('.status-dot');
@@ -43,29 +55,23 @@ async function checkStatus() {
 
         if (data.status === 'online') {
             apiConfigured = data.api_configured;
+
+            // Show setup screen or the main app
+            if (!data.api_configured) {
+                showSetup();
+            } else {
+                showApp();
+            }
+
             dot.classList.add('online');
             text.textContent = data.api_configured ? 'Online — API Connected' : 'Online — No API Key';
             text.style.color = data.api_configured ? '#4dd88a' : '#d4a853';
-
-            // Show a warning in chat if API key is missing (once)
-            if (!data.api_configured && !window._apiWarningShown) {
-                window._apiWarningShown = true;
-                appendMessage('assistant',
-                    '**Warning: No OpenAI API key configured.**\n\n' +
-                    'Chat and analysis features will not work until you add your API key.\n\n' +
-                    'To fix this:\n' +
-                    '1. Open the `.env` file in the project root\n' +
-                    '2. Set `OPENAI_API_KEY=sk-proj-your-real-key`\n' +
-                    '3. Restart the server\n\n' +
-                    'Get a key at: https://platform.openai.com/api-keys'
-                );
-            }
 
             if (extStatus) {
                 extStatus.className = 'extension-status online';
                 extStatus.innerHTML = `
                     <p style="color: #4dd88a; font-weight: 600;">Backend Online</p>
-                    <p>API: ${data.api_configured ? 'Configured' : 'Not configured — set OPENAI_API_KEY in .env'}</p>
+                    <p>API: ${data.api_configured ? 'Configured' : 'Not configured'}</p>
                     <p>Extension endpoint: <code style="color: #3dd8c5;">${API_BASE}/api/analyze-page</code></p>
                 `;
             }
@@ -84,6 +90,66 @@ async function checkStatus() {
 
 checkStatus();
 setInterval(checkStatus, 30000);
+
+// ─── Setup Form ───
+const setupKeyInput = document.getElementById('setup-api-key');
+const setupSubmitBtn = document.getElementById('setup-submit');
+const setupError = document.getElementById('setup-error');
+
+setupKeyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitApiKey();
+});
+
+setupSubmitBtn.addEventListener('click', submitApiKey);
+
+async function submitApiKey() {
+    const key = setupKeyInput.value.trim();
+    setupError.style.display = 'none';
+
+    if (!key) {
+        setupError.textContent = 'Please enter your API key.';
+        setupError.style.display = 'block';
+        return;
+    }
+
+    if (!key.startsWith('sk-')) {
+        setupError.textContent = 'Invalid key format. OpenAI keys start with "sk-".';
+        setupError.style.display = 'block';
+        return;
+    }
+
+    // Show loading state
+    setupSubmitBtn.disabled = true;
+    setupSubmitBtn.querySelector('.setup-btn-text').style.display = 'none';
+    setupSubmitBtn.querySelector('.setup-btn-loading').style.display = 'inline-flex';
+
+    try {
+        const resp = await fetch(API_BASE + '/api/setup-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: key }),
+        });
+
+        const data = await resp.json();
+
+        if (data.error) {
+            setupError.textContent = data.error;
+            setupError.style.display = 'block';
+        } else {
+            // Key saved — switch to the main app
+            apiConfigured = true;
+            showApp();
+        }
+    } catch (e) {
+        setupError.textContent = 'Connection error: ' + e.message;
+        setupError.style.display = 'block';
+    }
+
+    // Reset button
+    setupSubmitBtn.disabled = false;
+    setupSubmitBtn.querySelector('.setup-btn-text').style.display = 'inline';
+    setupSubmitBtn.querySelector('.setup-btn-loading').style.display = 'none';
+}
 
 // ─── Chat ───
 chatInput.addEventListener('keydown', (e) => {

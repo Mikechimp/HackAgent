@@ -13,8 +13,41 @@
     <!-- Geometric pattern overlay -->
     <div class="geometric-overlay"></div>
 
+    <!-- API Key Setup Screen (shown when no key is configured) -->
+    <div class="setup-overlay" id="setup-overlay" style="display:none;">
+        <div class="setup-card">
+            <div class="setup-logo">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="56" height="56">
+                    <path d="M24 4L4 14v20l20 10 20-10V14L24 4z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <path d="M24 4v40M4 14l20 10 20-10M4 34l20-10 20 10" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                    <circle cx="24" cy="24" r="6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <circle cx="24" cy="24" r="2" fill="currentColor"/>
+                </svg>
+            </div>
+            <h2 class="setup-title">Welcome to HackAgent</h2>
+            <p class="setup-subtitle">Enter your OpenAI API key to get started</p>
+
+            <div class="setup-input-group">
+                <label for="setup-api-key">OpenAI API Key</label>
+                <input type="password" id="setup-api-key" placeholder="sk-proj-..." autocomplete="off" spellcheck="false">
+                <p class="setup-hint">Get yours at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a></p>
+            </div>
+
+            <div id="setup-error" class="setup-error" style="display:none;"></div>
+
+            <button id="setup-submit" class="setup-btn">
+                <span class="setup-btn-text">Connect & Start</span>
+                <span class="setup-btn-loading" style="display:none;">
+                    <span class="spinner"></span> Verifying...
+                </span>
+            </button>
+
+            <p class="setup-footer">Your key is stored locally on this machine only.</p>
+        </div>
+    </div>
+
     <!-- Main container -->
-    <div class="app-container">
+    <div class="app-container" id="app-container">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
