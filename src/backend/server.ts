@@ -1,7 +1,6 @@
 /**
- * HackAgent — Express Backend Server
- * TypeScript port of web/app.py (Flask → Express)
- * Runs as a child process managed by Electron's BackendManager.
+ * HackAgent — Express Backend Server (v2 — Unified Pipelines)
+ * Both URL scan and extension analysis now get full Jhaddix-powered detection.
  */
 import express from 'express';
 import cors from 'cors';
@@ -14,7 +13,7 @@ import {
   isApiConfigured,
   resetClient,
 } from './services/openai-client';
-import { fetchPage, quickVulnCheck } from './services/page-analyzer';
+import { fetchPage, quickVulnCheck, detectTechnologies } from './services/page-analyzer';
 
 const app = express();
 const PORT = parseInt(process.env.HACKAGENT_PORT || '5175', 10);
@@ -83,6 +82,7 @@ let attackSurfaceDb: any = {};
 const dataPath = path.join(__dirname, '..', '..', 'data', 'attack_surface.json');
 if (fs.existsSync(dataPath)) {
   attackSurfaceDb = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+  console.log('[Server] Jhaddix attack surface DB loaded ✓');
 }
 
 // ─── Load .env on startup ───
@@ -114,13 +114,59 @@ function checkApiKey(): string | null {
   return null;
 }
 
+// ─── Attack Surface Matching ───
+function matchAttackSurface(technologies: any[]): any[] {
+  const matches: any[] = [];
+  const categories = attackSurfaceDb?.categories || {};
+  const techNames = new Set(technologies.map((t: any) => (t.name || '').toLowerCase()));
+
+  for (const [catName, catData] of Object.entries(categories)) {
+    for (const [toolName, toolData] of Object.entries((catData as any)?.tools || {})) {
+      const lower = toolName.toLowerCase();
+      if (techNames.has(lower) || [...techNames].some(t => t.includes(lower) || lower.includes(t))) {
+        matches.push({
+          technology: toolName,
+          category: catName,
+          attack_vectors: (toolData as any).attack_vectors || [],
+          default_creds: (toolData as any).default_creds || [],
+          critical_cves: (toolData as any).critical_cves || [],
+        });
+      }
+    }
+  }
+
+  // Also check default_credentials section
+  const defaultCreds = attackSurfaceDb?.default_credentials || {};
+  for (const [, services] of Object.entries(defaultCreds)) {
+    for (const [serviceName, creds] of Object.entries(services as any)) {
+      const lower = serviceName.toLowerCase();
+      if (techNames.has(lower) || [...techNames].some(t => t.includes(lower) || lower.includes(t))) {
+        const existing = matches.find(m => m.technology.toLowerCase() === lower);
+        if (existing) {
+          existing.default_creds = [...existing.default_creds, ...(creds as any[])];
+        } else {
+          matches.push({
+            technology: serviceName,
+            category: 'default_credentials',
+            attack_vectors: [],
+            default_creds: creds as any[],
+            critical_cves: [],
+          });
+        }
+      }
+    }
+  }
+
+  return matches;
+}
+
 // ─── Routes ───
 
 app.get('/api/status', (_req, res) => {
   res.json({
     status: 'online',
     api_configured: isApiConfigured(),
-    version: '1.0.0',
+    version: '2.0.0',
     pending_extension_result: latestExtensionProjectId,
   });
 });
@@ -196,6 +242,7 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// ─── URL Analysis (full pipeline) ───
 app.post('/api/analyze-url', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: "Missing 'url' field" });
@@ -206,8 +253,16 @@ app.post('/api/analyze-url', async (req, res) => {
   console.log(`[Server] Analyzing URL: ${url}`);
 
   try {
+    // Phase 1: Fetch and extract
     const pageData = await fetchPage(url);
+
+    // Phase 2: Automated vulnerability checks (now 20+ check categories)
     const quickFindings = quickVulnCheck(pageData);
+
+    // Phase 3: Match against Jhaddix attack surface DB
+    const matchedTech = matchAttackSurface(pageData.technologies);
+
+    // Phase 4: AI analysis with FULL context (Jhaddix data + automated findings)
     const aiResult = await analyzeUrlContent(
       url,
       pageData.headers,
@@ -215,9 +270,12 @@ app.post('/api/analyze-url', async (req, res) => {
       pageData.scripts,
       pageData.forms,
       pageData.cookies,
+      'gpt-4o',
+      matchedTech,
+      attackSurfaceDb?.common_vulnerability_patterns,
+      quickFindings,
+      pageData.technologies,
     );
-
-    const matchedTech = matchAttackSurface(pageData.technologies);
 
     // Auto-save as project
     let hostname = url;
@@ -241,12 +299,14 @@ app.post('/api/analyze-url', async (req, res) => {
         forms_count: pageData.forms.length,
         scripts_count: pageData.scripts.length,
         comments_count: pageData.comments.length,
+        links_count: pageData.links.length,
+        finding_count: quickFindings.length,
         errors: pageData.errors,
       },
       notes: '',
     };
     saveProject(project);
-    console.log(`[Server] Saved project ${project.id}`);
+    console.log(`[Server] Saved project ${project.id} — ${quickFindings.length} automated findings, ${matchedTech.length} attack surface matches`);
 
     res.json({
       url,
@@ -268,8 +328,24 @@ app.post('/api/analyze-url', async (req, res) => {
   }
 });
 
+// ─── Extension Page Analysis (UNIFIED pipeline — same quality as URL scan) ───
 app.post('/api/analyze-page', async (req, res) => {
-  const { url = 'unknown', html = '', headers = {}, cookies = [], screenshot } = req.body;
+  const {
+    url = 'unknown',
+    html = '',
+    headers = {},
+    cookies = [],
+    screenshot,
+    scripts: extScripts,
+    forms: extForms,
+    links: extLinks,
+    comments: extComments,
+    storage,
+    discoveredEndpoints,
+    detectedTechnologies: extTech,
+    meta: extMeta,
+    cspMeta,
+  } = req.body;
 
   const keyErr = checkApiKey();
   if (keyErr) return res.status(503).json({ error: keyErr });
@@ -278,8 +354,13 @@ app.post('/api/analyze-page', async (req, res) => {
     let hostname = url;
     try { hostname = new URL(url).hostname; } catch (_) {}
 
-    if (screenshot) {
-      const result = await analyzePageWithVision(screenshot, html, url);
+    // Screenshot-only path
+    if (screenshot && !html) {
+      const matchedTech = matchAttackSurface(extTech?.map((t: string) => ({ name: t })) || []);
+      const result = await analyzePageWithVision(
+        screenshot, undefined, url, 'gpt-4o',
+        matchedTech, attackSurfaceDb?.common_vulnerability_patterns,
+      );
       const project = {
         id: generateProjectId(),
         name: hostname + ' — Screenshot',
@@ -287,25 +368,121 @@ app.post('/api/analyze-page', async (req, res) => {
         source: 'extension',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        findings: { quick_findings: [], ai_analysis: result.raw_text },
+        findings: { quick_findings: [], ai_analysis: result.raw_text, attack_surface_matches: matchedTech },
         metadata: { analysis_type: 'vision' },
         notes: '',
       };
       saveProject(project);
       latestExtensionProjectId = project.id;
-      console.log(`[Server] Saved extension project ${project.id}`);
+      console.log(`[Server] Saved extension screenshot project ${project.id}`);
       return res.json({ url, project_id: project.id, ai_analysis: result.raw_text, analysis_type: 'vision' });
     }
 
+    // ── FULL ANALYSIS PIPELINE (same quality as URL scan) ──
+
+    // Build technologies list: merge extension client-side detection + server-side fingerprinting
+    const serverTechs = detectTechnologies(headers, html);
+    const clientTechNames = new Set(serverTechs.map(t => t.name));
+    const allTechnologies = [...serverTechs];
+
+    // Merge any extra techs from extension's client-side detection
+    if (extTech?.length) {
+      for (const t of extTech) {
+        const name = typeof t === 'string' ? t : t.name;
+        if (name && !clientTechNames.has(name)) {
+          allTechnologies.push({ name, source: 'extension-client', category: 'detected' });
+          clientTechNames.add(name);
+        }
+      }
+    }
+
+    // Build proper PageData from extension capture
     const pageData = {
-      url, html, headers, cookies,
-      scripts: [] as any[], forms: [] as any[], links: [] as string[],
-      comments: [] as string[], technologies: [] as any[],
-      security_headers: {} as any, status_code: null, errors: [] as string[],
+      url,
+      html,
+      headers,
+      cookies: cookies.map((c: any) => ({
+        name: c.name || '',
+        value: c.value || '',
+        domain: '',
+        path: '/',
+        secure: false,
+        httponly: false,
+      })),
+      scripts: extScripts || [],
+      forms: extForms || [],
+      links: (extLinks || []).map((l: any) => typeof l === 'string' ? l : l.href).filter(Boolean),
+      comments: extComments || [],
+      technologies: allTechnologies,
+      security_headers: checkSecurityHeadersFromRaw(headers),
+      status_code: null,
+      errors: [] as string[],
     };
 
+    // Phase 2: Full automated vulnerability checks
     const quickFindings = quickVulnCheck(pageData);
-    const aiResult = await analyzeUrlContent(url, headers, html, [], [], cookies);
+
+    // Add storage-based findings
+    if (storage) {
+      const lsKeys = Object.keys(storage.localStorage || {});
+      const ssKeys = Object.keys(storage.sessionStorage || {});
+      const sensitiveStoragePatterns = /token|session|auth|key|secret|password|jwt|credential|api/i;
+
+      for (const key of [...lsKeys, ...ssKeys]) {
+        if (sensitiveStoragePatterns.test(key)) {
+          const isLS = lsKeys.includes(key);
+          const value = isLS
+            ? (storage.localStorage || {})[key]
+            : (storage.sessionStorage || {})[key];
+          quickFindings.push({
+            type: 'sensitive_storage',
+            severity: 'Medium',
+            title: `Sensitive data in ${isLS ? 'localStorage' : 'sessionStorage'}: ${key}`,
+            description: `Key "${key}" with value "${(value || '').substring(0, 50)}..." found in browser storage. XSS can exfiltrate this data.`,
+          });
+        }
+      }
+
+      if (lsKeys.length > 0 || ssKeys.length > 0) {
+        quickFindings.push({
+          type: 'storage_info',
+          severity: 'Info',
+          title: `Browser storage: ${lsKeys.length} localStorage + ${ssKeys.length} sessionStorage keys`,
+          description: `localStorage keys: ${lsKeys.slice(0, 10).join(', ')}. sessionStorage keys: ${ssKeys.slice(0, 10).join(', ')}.`,
+        });
+      }
+    }
+
+    // Add CSP meta tag finding
+    if (cspMeta) {
+      if (cspMeta.includes("'unsafe-inline'") || cspMeta.includes("'unsafe-eval'")) {
+        quickFindings.push({
+          type: 'weak_csp',
+          severity: 'Medium',
+          title: 'Weak CSP in meta tag',
+          description: `CSP delivered via meta tag contains unsafe directives: ${cspMeta.substring(0, 200)}`,
+        });
+      }
+    }
+
+    // Phase 3: Match against Jhaddix attack surface DB
+    const matchedTech = matchAttackSurface(allTechnologies);
+
+    // Phase 4: AI analysis with FULL Jhaddix context
+    const aiResult = await analyzeUrlContent(
+      url,
+      headers,
+      html,
+      pageData.scripts,
+      pageData.forms,
+      cookies,
+      'gpt-4o',
+      matchedTech,
+      attackSurfaceDb?.common_vulnerability_patterns,
+      quickFindings,
+      allTechnologies,
+      discoveredEndpoints,
+    );
 
     const project = {
       id: generateProjectId(),
@@ -314,15 +491,37 @@ app.post('/api/analyze-page', async (req, res) => {
       source: 'extension',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      findings: { quick_findings: quickFindings, ai_analysis: aiResult.raw_text },
-      metadata: { analysis_type: 'content' },
+      findings: {
+        quick_findings: quickFindings,
+        ai_analysis: aiResult.raw_text,
+        attack_surface_matches: matchedTech,
+        technologies: allTechnologies,
+      },
+      metadata: {
+        analysis_type: 'content',
+        forms_count: pageData.forms.length,
+        scripts_count: pageData.scripts.length,
+        comments_count: pageData.comments.length,
+        links_count: pageData.links.length,
+        finding_count: quickFindings.length,
+        storage_keys: storage ? Object.keys(storage.localStorage || {}).length + Object.keys(storage.sessionStorage || {}).length : 0,
+        discovered_endpoints: discoveredEndpoints?.length || 0,
+      },
       notes: '',
     };
     saveProject(project);
     latestExtensionProjectId = project.id;
-    console.log(`[Server] Saved extension project ${project.id}`);
+    console.log(`[Server] Saved extension project ${project.id} — ${quickFindings.length} automated findings, ${matchedTech.length} attack surface matches, ${allTechnologies.length} techs`);
 
-    res.json({ url, project_id: project.id, quick_findings: quickFindings, ai_analysis: aiResult.raw_text, analysis_type: 'content' });
+    res.json({
+      url,
+      project_id: project.id,
+      quick_findings: quickFindings,
+      ai_analysis: aiResult.raw_text,
+      attack_surface_matches: matchedTech,
+      technologies: allTechnologies,
+      analysis_type: 'content',
+    });
   } catch (e: any) {
     console.error('[Server] Page analysis error:', e.message);
     res.status(500).json({ error: e.message });
@@ -405,6 +604,8 @@ app.get('/api/extension/download', (_req, res) => {
 app.get('/api/default-creds', (req, res) => {
   const query = ((req.query.q as string) || '').toLowerCase();
   const results: Record<string, any> = {};
+
+  // Search in default_credentials
   for (const [, services] of Object.entries(attackSurfaceDb?.default_credentials || {})) {
     for (const [service, creds] of Object.entries(services as any)) {
       if (service.toLowerCase().includes(query)) {
@@ -412,32 +613,57 @@ app.get('/api/default-creds', (req, res) => {
       }
     }
   }
-  res.json(results);
-});
 
-function matchAttackSurface(technologies: any[]): any[] {
-  const matches: any[] = [];
-  const categories = attackSurfaceDb?.categories || {};
-  const techNames = new Set(technologies.map((t: any) => (t.name || '').toLowerCase()));
-
-  for (const [catName, catData] of Object.entries(categories)) {
+  // Also search in categories for tools with default_creds
+  for (const [, catData] of Object.entries(attackSurfaceDb?.categories || {})) {
     for (const [toolName, toolData] of Object.entries((catData as any)?.tools || {})) {
-      const lower = toolName.toLowerCase();
-      if (techNames.has(lower) || [...techNames].some(t => t.includes(lower))) {
-        matches.push({
-          technology: toolName,
-          category: catName,
-          attack_vectors: (toolData as any).attack_vectors || [],
-          default_creds: (toolData as any).default_creds || [],
-          critical_cves: (toolData as any).critical_cves || [],
-        });
+      if (toolName.toLowerCase().includes(query) && (toolData as any).default_creds?.length) {
+        if (!results[toolName]) {
+          results[toolName] = (toolData as any).default_creds;
+        }
       }
     }
   }
-  return matches;
+
+  res.json(results);
+});
+
+// ─── Helper: Build security headers from raw headers (for extension data) ───
+function checkSecurityHeadersFromRaw(headers: Record<string, string>): Record<string, any> {
+  const checks: Record<string, any> = {};
+  const lh: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers || {})) {
+    lh[k.toLowerCase()] = v;
+  }
+
+  const secHeaders: Record<string, string> = {
+    'strict-transport-security': 'hsts',
+    'content-security-policy': 'csp',
+    'x-frame-options': 'x_frame_options',
+    'x-content-type-options': 'x_content_type',
+    'x-xss-protection': 'x_xss_protection',
+    'referrer-policy': 'referrer_policy',
+    'permissions-policy': 'permissions_policy',
+  };
+
+  for (const [header, key] of Object.entries(secHeaders)) {
+    const value = lh[header] ?? null;
+    checks[key] = {
+      present: value !== null,
+      value,
+      severity: value === null ? 'Medium' : 'Info',
+    };
+  }
+
+  if (!checks['hsts']?.present) checks['hsts'].severity = 'High';
+  if (!checks['csp']?.present) checks['csp'].severity = 'High';
+
+  return checks;
 }
 
 // ─── Start ───
 app.listen(PORT, () => {
-  console.log(`[Server] HackAgent backend running on http://localhost:${PORT}`);
+  console.log(`[Server] HackAgent v2 backend running on http://localhost:${PORT}`);
+  console.log(`[Server] Attack surface DB: ${Object.keys(attackSurfaceDb?.categories || {}).length} categories loaded`);
+  console.log(`[Server] Vulnerability patterns: ${attackSurfaceDb?.common_vulnerability_patterns?.owasp_top_10?.length || 0} OWASP checks`);
 });

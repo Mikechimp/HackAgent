@@ -62,12 +62,15 @@ export interface ScriptInfo {
 export interface FormInfo {
   action: string;
   method: string;
-  inputs: { name: string; type: string }[];
+  enctype?: string;
+  inputs: { name: string; type: string; value?: string }[];
 }
 
 export interface TechInfo {
   name: string;
   value?: string;
+  version?: string;
+  category?: string;
   source: string;
 }
 
