@@ -2,7 +2,7 @@
  * HackAgent Firefox Extension — Popup Controller
  */
 
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'http://localhost:5175';
 
 const statusDot = document.querySelector('.status-dot');
 const statusText = document.getElementById('status-text');
