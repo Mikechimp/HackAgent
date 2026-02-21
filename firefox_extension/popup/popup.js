@@ -146,7 +146,12 @@ btnScreenshot.addEventListener('click', async () => {
     btnScreenshot.disabled = false;
 });
 
-// Open full HackAgent UI
+// Open full HackAgent UI — results are auto-saved, tell user to switch to desktop app
 btnOpenFull.addEventListener('click', () => {
-    browser.tabs.create({ url: BACKEND_URL });
+    btnOpenFull.textContent = 'Results saved — switch to HackAgent app!';
+    btnOpenFull.style.color = '#4dd88a';
+    setTimeout(() => {
+        btnOpenFull.textContent = 'Open in HackAgent';
+        btnOpenFull.style.color = '';
+    }, 4000);
 });

@@ -25,6 +25,59 @@ app.use(express.json({ limit: '50mb' }));
 // ─── In-memory conversation storage ───
 const conversations: Record<string, { role: string; content: string }[]> = {};
 
+// ─── Projects / Saved Analyses ───
+const PROJECTS_DIR = path.join(__dirname, '..', '..', 'data', 'projects');
+if (!fs.existsSync(PROJECTS_DIR)) {
+  fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+}
+
+let latestExtensionProjectId: string | null = null;
+
+function generateProjectId(): string {
+  return 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function saveProject(project: any): void {
+  fs.writeFileSync(
+    path.join(PROJECTS_DIR, project.id + '.json'),
+    JSON.stringify(project, null, 2),
+  );
+}
+
+function loadProject(id: string): any | null {
+  const fp = path.join(PROJECTS_DIR, id + '.json');
+  if (!fs.existsSync(fp)) return null;
+  return JSON.parse(fs.readFileSync(fp, 'utf-8'));
+}
+
+function listProjects(): any[] {
+  if (!fs.existsSync(PROJECTS_DIR)) return [];
+  return fs
+    .readdirSync(PROJECTS_DIR)
+    .filter(f => f.endsWith('.json'))
+    .map(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(PROJECTS_DIR, f), 'utf-8'));
+      return {
+        id: d.id,
+        name: d.name,
+        url: d.url,
+        source: d.source,
+        created_at: d.created_at,
+        finding_count: (d.findings?.quick_findings?.length || 0),
+        has_ai: !!d.findings?.ai_analysis,
+        notes: d.notes || '',
+      };
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+function deleteProject(id: string): boolean {
+  const fp = path.join(PROJECTS_DIR, id + '.json');
+  if (!fs.existsSync(fp)) return false;
+  fs.unlinkSync(fp);
+  return true;
+}
+
 // ─── Load attack surface knowledge base ───
 let attackSurfaceDb: any = {};
 const dataPath = path.join(__dirname, '..', '..', 'data', 'attack_surface.json');
@@ -68,6 +121,7 @@ app.get('/api/status', (_req, res) => {
     status: 'online',
     api_configured: isApiConfigured(),
     version: '1.0.0',
+    pending_extension_result: latestExtensionProjectId,
   });
 });
 
@@ -165,8 +219,38 @@ app.post('/api/analyze-url', async (req, res) => {
 
     const matchedTech = matchAttackSurface(pageData.technologies);
 
+    // Auto-save as project
+    let hostname = url;
+    try { hostname = new URL(url).hostname; } catch (_) {}
+    const project = {
+      id: generateProjectId(),
+      name: hostname + ' — URL Scan',
+      url,
+      source: 'url-scan',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      findings: {
+        quick_findings: quickFindings,
+        ai_analysis: aiResult.raw_text,
+        attack_surface_matches: matchedTech,
+        technologies: pageData.technologies,
+        security_headers: pageData.security_headers,
+      },
+      metadata: {
+        status_code: pageData.status_code,
+        forms_count: pageData.forms.length,
+        scripts_count: pageData.scripts.length,
+        comments_count: pageData.comments.length,
+        errors: pageData.errors,
+      },
+      notes: '',
+    };
+    saveProject(project);
+    console.log(`[Server] Saved project ${project.id}`);
+
     res.json({
       url,
+      project_id: project.id,
       status_code: pageData.status_code,
       technologies: pageData.technologies,
       security_headers: pageData.security_headers,
@@ -191,9 +275,26 @@ app.post('/api/analyze-page', async (req, res) => {
   if (keyErr) return res.status(503).json({ error: keyErr });
 
   try {
+    let hostname = url;
+    try { hostname = new URL(url).hostname; } catch (_) {}
+
     if (screenshot) {
       const result = await analyzePageWithVision(screenshot, html, url);
-      return res.json({ url, ai_analysis: result.raw_text, analysis_type: 'vision' });
+      const project = {
+        id: generateProjectId(),
+        name: hostname + ' — Screenshot',
+        url,
+        source: 'extension',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        findings: { quick_findings: [], ai_analysis: result.raw_text },
+        metadata: { analysis_type: 'vision' },
+        notes: '',
+      };
+      saveProject(project);
+      latestExtensionProjectId = project.id;
+      console.log(`[Server] Saved extension project ${project.id}`);
+      return res.json({ url, project_id: project.id, ai_analysis: result.raw_text, analysis_type: 'vision' });
     }
 
     const pageData = {
@@ -206,7 +307,22 @@ app.post('/api/analyze-page', async (req, res) => {
     const quickFindings = quickVulnCheck(pageData);
     const aiResult = await analyzeUrlContent(url, headers, html, [], [], cookies);
 
-    res.json({ url, quick_findings: quickFindings, ai_analysis: aiResult.raw_text, analysis_type: 'content' });
+    const project = {
+      id: generateProjectId(),
+      name: hostname + ' — Page Analysis',
+      url,
+      source: 'extension',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      findings: { quick_findings: quickFindings, ai_analysis: aiResult.raw_text },
+      metadata: { analysis_type: 'content' },
+      notes: '',
+    };
+    saveProject(project);
+    latestExtensionProjectId = project.id;
+    console.log(`[Server] Saved extension project ${project.id}`);
+
+    res.json({ url, project_id: project.id, quick_findings: quickFindings, ai_analysis: aiResult.raw_text, analysis_type: 'content' });
   } catch (e: any) {
     console.error('[Server] Page analysis error:', e.message);
     res.status(500).json({ error: e.message });
@@ -238,6 +354,42 @@ app.get('/api/knowledge-base', (_req, res) => {
     categories: Object.keys(attackSurfaceDb?.categories || {}),
     default_credential_categories: Object.keys(attackSurfaceDb?.default_credentials || {}),
   });
+});
+
+// ─── Projects CRUD ───
+
+app.get('/api/projects', (_req, res) => {
+  res.json(listProjects());
+});
+
+app.get('/api/projects/:id', (req, res) => {
+  const project = loadProject(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  res.json(project);
+});
+
+app.delete('/api/projects/:id', (req, res) => {
+  if (deleteProject(req.params.id)) {
+    res.json({ status: 'deleted' });
+  } else {
+    res.status(404).json({ error: 'Project not found' });
+  }
+});
+
+app.patch('/api/projects/:id', (req, res) => {
+  const project = loadProject(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const { name, notes } = req.body;
+  if (name !== undefined) project.name = name;
+  if (notes !== undefined) project.notes = notes;
+  project.updated_at = new Date().toISOString();
+  saveProject(project);
+  res.json(project);
+});
+
+app.post('/api/extension/dismiss', (_req, res) => {
+  latestExtensionProjectId = null;
+  res.json({ status: 'ok' });
 });
 
 app.get('/api/extension/download', (_req, res) => {

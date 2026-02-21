@@ -81,8 +81,13 @@
                     <span class="nav-icon">📖</span>
                     <span class="nav-label">Knowledge Base</span>
                 </button>
+                <button class="nav-item" data-panel="projects">
+                    <span class="nav-icon">&#128194;</span>
+                    <span class="nav-label">Projects</span>
+                    <span class="nav-badge" id="projects-badge" style="display:none;"></span>
+                </button>
                 <button class="nav-item" data-panel="extension">
-                    <span class="nav-icon">🦊</span>
+                    <span class="nav-icon">&#129418;</span>
                     <span class="nav-label">Firefox Extension</span>
                 </button>
             </nav>
@@ -288,6 +293,59 @@
                                 <div class="kb-tool">CloudFormation — template parameter secrets, IAM extraction</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects panel -->
+            <div class="panel" id="panel-projects">
+                <div class="panel-header">
+                    <div class="panel-title-area">
+                        <h2>Saved Projects</h2>
+                        <p class="panel-subtitle">Analysis history and saved security research</p>
+                    </div>
+                    <div class="ornament-divider"></div>
+                </div>
+
+                <div class="projects-container">
+                    <!-- Toolbar -->
+                    <div class="projects-toolbar">
+                        <input type="text" id="projects-search" placeholder="Search projects by URL or name...">
+                        <button id="projects-refresh" class="projects-refresh-btn" title="Refresh">&#8635;</button>
+                    </div>
+
+                    <!-- List view -->
+                    <div id="projects-list" class="projects-list"></div>
+
+                    <!-- Empty state -->
+                    <div id="projects-empty" class="projects-empty">
+                        <div class="projects-empty-icon">
+                            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                                <rect x="8" y="12" width="48" height="44" rx="4"/>
+                                <path d="M8 24h48"/>
+                                <path d="M24 4h16v8H24z"/>
+                                <path d="M28 34h8M28 42h8" opacity="0.4"/>
+                            </svg>
+                        </div>
+                        <p>No saved projects yet</p>
+                        <p class="projects-empty-sub">Results from URL scans and the Firefox extension auto-save here</p>
+                    </div>
+
+                    <!-- Detail view -->
+                    <div id="project-detail" class="project-detail" style="display:none;">
+                        <div class="project-detail-header">
+                            <button id="project-back" class="project-back-btn">&larr; Back to list</button>
+                            <div class="project-detail-actions">
+                                <button id="project-delete" class="project-action-btn delete" title="Delete project">&#128465;</button>
+                            </div>
+                        </div>
+                        <div class="project-detail-meta" id="project-meta"></div>
+                        <div class="project-notes-area">
+                            <label for="project-notes">Notes</label>
+                            <textarea id="project-notes" placeholder="Add your notes, next steps, or observations..." rows="3"></textarea>
+                            <button id="project-save-notes" class="project-save-btn">Save Notes</button>
+                        </div>
+                        <div id="project-results" class="analysis-results"></div>
                     </div>
                 </div>
             </div>
