@@ -26,6 +26,17 @@ from models.openai_client import (
     analyze_url_content,
 )
 
+
+def _check_api_key():
+    """Return an error message if the OpenAI API key is missing/placeholder, else None."""
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key or api_key.startswith("sk-proj-your"):
+        return (
+            "No OpenAI API key configured. "
+            "Add your key to the .env file: OPENAI_API_KEY=sk-proj-..."
+        )
+    return None
+
 # Load .env before anything else
 _load_dotenv()
 
@@ -66,6 +77,10 @@ def api_chat():
     if not data or "message" not in data:
         return jsonify({"error": "Missing 'message' field"}), 400
 
+    key_err = _check_api_key()
+    if key_err:
+        return jsonify({"error": key_err}), 503
+
     user_message = data["message"]
     session_id = data.get("session_id", "default")
     model = data.get("model", "gpt-4o")
@@ -104,6 +119,10 @@ def api_analyze_url():
     data = request.get_json()
     if not data or "url" not in data:
         return jsonify({"error": "Missing 'url' field"}), 400
+
+    key_err = _check_api_key()
+    if key_err:
+        return jsonify({"error": key_err}), 503
 
     url = data["url"]
     LOG.info(f"Analyzing URL: {url}")
@@ -159,6 +178,10 @@ def api_analyze_page():
     headers = data.get("headers", {})
     cookies = data.get("cookies", [])
     screenshot_b64 = data.get("screenshot")
+
+    key_err = _check_api_key()
+    if key_err:
+        return jsonify({"error": key_err}), 503
 
     LOG.info(f"Analyzing page from extension: {url}")
 
@@ -222,6 +245,10 @@ def api_screenshot():
     if not data or "screenshot" not in data:
         return jsonify({"error": "Missing 'screenshot' field (base64 encoded)"}), 400
 
+    key_err = _check_api_key()
+    if key_err:
+        return jsonify({"error": key_err}), 503
+
     try:
         result = analyze_page_with_vision(
             screenshot_b64=data["screenshot"],
@@ -265,9 +292,10 @@ def api_default_creds():
 def api_status():
     """Health check endpoint."""
     api_key = os.environ.get("OPENAI_API_KEY", "")
+    key_valid = bool(api_key) and not api_key.startswith("sk-proj-your")
     return jsonify({
         "status": "online",
-        "api_configured": bool(api_key),
+        "api_configured": key_valid,
         "version": "1.0.0",
     })
 
