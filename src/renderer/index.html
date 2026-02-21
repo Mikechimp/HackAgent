@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:5175; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+    <title>HackAgent — AI Security Analyst</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Geometric pattern overlay -->
+    <div class="geometric-overlay"></div>
+
+    <!-- API Key Setup Screen (shown when no key is configured) -->
+    <div class="setup-overlay" id="setup-overlay" style="display:none;">
+        <div class="setup-card">
+            <div class="setup-logo">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="56" height="56">
+                    <path d="M24 4L4 14v20l20 10 20-10V14L24 4z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <path d="M24 4v40M4 14l20 10 20-10M4 34l20-10 20 10" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                    <circle cx="24" cy="24" r="6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <circle cx="24" cy="24" r="2" fill="currentColor"/>
+                </svg>
+            </div>
+            <h2 class="setup-title">Welcome to HackAgent</h2>
+            <p class="setup-subtitle">Enter your OpenAI API key to get started</p>
+
+            <div class="setup-input-group">
+                <label for="setup-api-key">OpenAI API Key</label>
+                <input type="password" id="setup-api-key" placeholder="sk-proj-..." autocomplete="off" spellcheck="false">
+                <p class="setup-hint">Get yours at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a></p>
+            </div>
+
+            <div id="setup-error" class="setup-error" style="display:none;"></div>
+
+            <button id="setup-submit" class="setup-btn">
+                <span class="setup-btn-text">Connect & Start</span>
+                <span class="setup-btn-loading" style="display:none;">
+                    <span class="spinner"></span> Verifying...
+                </span>
+            </button>
+
+            <p class="setup-footer">Your key is stored locally on this machine only.</p>
+        </div>
+    </div>
+
+    <!-- Main container -->
+    <div class="app-container" id="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M24 4L4 14v20l20 10 20-10V14L24 4z" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <path d="M24 4v40M4 14l20 10 20-10M4 34l20-10 20 10" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                            <circle cx="24" cy="24" r="6" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <circle cx="24" cy="24" r="2" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <h1>HackAgent</h1>
+                        <span class="logo-subtitle">Security Analyst</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-panel="chat">
+                    <span class="nav-icon">💬</span>
+                    <span class="nav-label">Chat</span>
+                </button>
+                <button class="nav-item" data-panel="analyze">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-label">Analyze URL</span>
+                </button>
+                <button class="nav-item" data-panel="knowledge">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">Knowledge Base</span>
+                </button>
+                <button class="nav-item" data-panel="extension">
+                    <span class="nav-icon">🦊</span>
+                    <span class="nav-label">Firefox Extension</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
+                <div class="ornamental-border"></div>
+                <p class="disclaimer">Authorized testing only</p>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="main-content">
+            <!-- Chat panel -->
+            <div class="panel active" id="panel-chat">
+                <div class="panel-header">
+                    <div class="panel-title-area">
+                        <h2>Chat with HackAgent</h2>
+                        <p class="panel-subtitle">AI-powered security research assistant</p>
+                    </div>
+                    <div class="ornament-divider"></div>
+                </div>
+
+                <div class="chat-container" id="chat-messages">
+                    <div class="message assistant">
+                        <div class="message-avatar">
+                            <span>HA</span>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-sender">HackAgent</span>
+                            </div>
+                            <div class="message-body">
+                                <p>Initializing HackAgent security analysis framework...</p>
+                                <p>I'm your AI security research assistant, built for <strong>authorized</strong> bug bounty hunting and penetration testing. I have access to Jason Haddix's devops-attack-surface knowledge base covering 60+ DevOps tools and 200+ attack vectors.</p>
+                                <p>Here's what I can do:</p>
+                                <ul>
+                                    <li><strong>Analyze URLs</strong> — Fetch and scan web pages for vulnerabilities</li>
+                                    <li><strong>Review pages</strong> — Use the Firefox extension to send me any page you're viewing</li>
+                                    <li><strong>Security chat</strong> — Ask me about CVEs, attack techniques, default credentials, and more</li>
+                                    <li><strong>Knowledge base</strong> — Cross-reference findings against known attack surfaces</li>
+                                </ul>
+                                <p>What would you like to investigate?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="input-ornament left"></div>
+                    <div class="chat-input-wrapper">
+                        <textarea id="chat-input" placeholder="Ask about vulnerabilities, CVEs, attack techniques..." rows="1"></textarea>
+                        <button id="chat-send" class="send-btn" title="Send message">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-ornament right"></div>
+                </div>
+            </div>
+
+            <!-- URL Analysis panel -->
+            <div class="panel" id="panel-analyze">
+                <div class="panel-header">
+                    <div class="panel-title-area">
+                        <h2>URL Security Analysis</h2>
+                        <p class="panel-subtitle">Deep-scan any URL for vulnerabilities and misconfigurations</p>
+                    </div>
+                    <div class="ornament-divider"></div>
+                </div>
+
+                <div class="analyze-container">
+                    <div class="url-input-area">
+                        <div class="url-input-wrapper">
+                            <span class="url-protocol">https://</span>
+                            <input type="text" id="url-input" placeholder="target.example.com/path">
+                            <button id="url-analyze-btn" class="analyze-btn">
+                                <span class="btn-text">Scan</span>
+                                <span class="btn-loading" style="display:none;">
+                                    <span class="spinner"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="analysis-results" class="analysis-results" style="display:none;">
+                        <!-- Results populated by JS -->
+                    </div>
+
+                    <div id="analysis-placeholder" class="analysis-placeholder">
+                        <div class="placeholder-icon">
+                            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="32" cy="32" r="28"/>
+                                <path d="M32 18v14l10 10"/>
+                                <path d="M20 44l24-24" opacity="0.3"/>
+                            </svg>
+                        </div>
+                        <p>Enter a URL above to begin security analysis</p>
+                        <p class="placeholder-sub">Headers, technologies, forms, scripts, and AI-powered vulnerability detection</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Knowledge Base panel -->
+            <div class="panel" id="panel-knowledge">
+                <div class="panel-header">
+                    <div class="panel-title-area">
+                        <h2>Attack Surface Knowledge Base</h2>
+                        <p class="panel-subtitle">From Jason Haddix's devops-attack-surface — 60+ tools, 200+ vectors</p>
+                    </div>
+                    <div class="ornament-divider"></div>
+                </div>
+
+                <div class="knowledge-container">
+                    <div class="kb-search">
+                        <input type="text" id="kb-search" placeholder="Search tools, CVEs, default credentials...">
+                    </div>
+
+                    <div class="kb-categories" id="kb-categories">
+                        <div class="kb-category" data-category="source_code_management">
+                            <div class="kb-category-header">
+                                <span class="kb-category-icon">📦</span>
+                                <h3>Source Code Management</h3>
+                                <span class="kb-count">5 tools</span>
+                            </div>
+                            <div class="kb-tools">
+                                <div class="kb-tool">Git — exposed .git dirs, secret scanning, credential recovery</div>
+                                <div class="kb-tool">GitHub — dorking, workflow RCE, PAT theft</div>
+                                <div class="kb-tool">GitLab — SAML bypass, ExifTool RCE (CVSS 10.0)</div>
+                                <div class="kb-tool">Bitbucket — command injection, path traversal</div>
+                                <div class="kb-tool">Azure DevOps — privilege escalation (CVSS 10.0)</div>
+                            </div>
+                        </div>
+
+                        <div class="kb-category" data-category="build_servers">
+                            <div class="kb-category-header">
+                                <span class="kb-category-icon">🔨</span>
+                                <h3>Build Servers</h3>
+                                <span class="kb-count">5 tools</span>
+                            </div>
+                            <div class="kb-tools">
+                                <div class="kb-tool">Jenkins — file leak to RCE (CVSS 9.8), Groovy console</div>
+                                <div class="kb-tool">TeamCity — auth bypass to RCE (CVSS 9.8)</div>
+                                <div class="kb-tool">CircleCI — token theft, env var extraction</div>
+                                <div class="kb-tool">GitHub Actions — workflow injection, runner compromise</div>
+                                <div class="kb-tool">Bamboo — SQL injection (CVSS 10.0)</div>
+                            </div>
+                        </div>
+
+                        <div class="kb-category" data-category="secrets_managers">
+                            <div class="kb-category-header">
+                                <span class="kb-category-icon">🔐</span>
+                                <h3>Secrets Managers</h3>
+                                <span class="kb-count">4 tools</span>
+                            </div>
+                            <div class="kb-tools">
+                                <div class="kb-tool">HashiCorp Vault — 14 CVEs, audit RCE, MFA bypass</div>
+                                <div class="kb-tool">AWS Secrets Manager — IAM abuse, secret recovery</div>
+                                <div class="kb-tool">Azure Key Vault — managed identity exploitation</div>
+                                <div class="kb-tool">CyberArk — session hijacking, Safe extraction</div>
+                            </div>
+                        </div>
+
+                        <div class="kb-category" data-category="monitoring">
+                            <div class="kb-category-header">
+                                <span class="kb-category-icon">📊</span>
+                                <h3>Operations & Monitoring</h3>
+                                <span class="kb-count">3 tools</span>
+                            </div>
+                            <div class="kb-tools">
+                                <div class="kb-tool">Splunk — RCE via file upload, default creds (admin:changeme)</div>
+                                <div class="kb-tool">Grafana — XSS to SSRF, default creds (admin:admin)</div>
+                                <div class="kb-tool">Elastic/ELK — Kibana RCE, unauth Elasticsearch</div>
+                            </div>
+                        </div>
+
+                        <div class="kb-category" data-category="default_credentials">
+                            <div class="kb-category-header">
+                                <span class="kb-category-icon">🔑</span>
+                                <h3>Default Credentials</h3>
+                                <span class="kb-count">50+ services</span>
+                            </div>
+                            <div class="kb-tools">
+                                <div class="kb-tool">Databases: PostgreSQL, MySQL, MongoDB, Redis, MSSQL, Elasticsearch</div>
+                                <div class="kb-tool">Web Apps: WordPress, Jenkins, GitLab, Grafana, Tomcat</div>
+                                <div class="kb-tool">Network: Cisco, Juniper, FortiGate, Palo Alto, MikroTik</div>
+                                <div class="kb-tool">Servers: WebLogic, WebSphere, ActiveMQ, RabbitMQ</div>
+                            </div>
+                        </div>
+
+                        <div class="kb-category" data-category="infrastructure_as_code">
+                            <div class="kb-category-header">
+                                <span class="kb-category-icon">🏗️</span>
+                                <h3>Infrastructure as Code</h3>
+                                <span class="kb-count">2 tools</span>
+                            </div>
+                            <div class="kb-tools">
+                                <div class="kb-tool">Terraform — tfstate extraction (contains credentials)</div>
+                                <div class="kb-tool">CloudFormation — template parameter secrets, IAM extraction</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Firefox Extension panel -->
+            <div class="panel" id="panel-extension">
+                <div class="panel-header">
+                    <div class="panel-title-area">
+                        <h2>Firefox Extension</h2>
+                        <p class="panel-subtitle">Live page capture and security analysis from your browser</p>
+                    </div>
+                    <div class="ornament-divider"></div>
+                </div>
+
+                <div class="extension-container">
+                    <div class="extension-card">
+                        <h3>Installation</h3>
+                        <ol class="extension-steps">
+                            <li>
+                                <strong>Navigate to the extension folder:</strong>
+                                <code>cd firefox_extension/</code>
+                            </li>
+                            <li>
+                                <strong>Open Firefox and go to:</strong>
+                                <code>about:debugging#/runtime/this-firefox</code>
+                            </li>
+                            <li>
+                                <strong>Click "Load Temporary Add-on"</strong> and select <code>manifest.json</code> from the <code>firefox_extension/</code> folder
+                            </li>
+                            <li>
+                                <strong>The HackAgent icon will appear in your toolbar</strong> — click it on any page to analyze
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="extension-card">
+                        <h3>How It Works</h3>
+                        <div class="extension-flow">
+                            <div class="flow-step">
+                                <div class="flow-icon">🌐</div>
+                                <p>Browse to any web page</p>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step">
+                                <div class="flow-icon">🦊</div>
+                                <p>Click the HackAgent extension icon</p>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step">
+                                <div class="flow-icon">🔍</div>
+                                <p>Page content captured and sent</p>
+                            </div>
+                            <div class="flow-arrow">→</div>
+                            <div class="flow-step">
+                                <div class="flow-icon">🤖</div>
+                                <p>AI analyzes for vulnerabilities</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="extension-card">
+                        <h3>Backend Status</h3>
+                        <div class="extension-status" id="extension-status">
+                            <p>Checking connection...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
