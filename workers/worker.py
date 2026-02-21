@@ -3,9 +3,11 @@ import json, shutil, subprocess, time, os, resource
 from pathlib import Path
 from datetime import datetime
 
-ROOT = Path('/app')
-LOG_DIR = Path('/app/logs')
-DATA_DIR = Path('/app/data')
+# Auto-detect project root: /app in Docker, otherwise parent of this file's directory
+_DOCKER_ROOT = Path('/app')
+ROOT = _DOCKER_ROOT if _DOCKER_ROOT.exists() and (_DOCKER_ROOT / 'workers').exists() else Path(__file__).resolve().parent.parent
+LOG_DIR = ROOT / 'logs'
+DATA_DIR = ROOT / 'data'
 WHITELIST = json.loads((Path(__file__).parent / 'tools_whitelist.json').read_text())
 
 CMD_TIMEOUT = int(os.environ.get("WORKER_TOOL_TIMEOUT", "20"))

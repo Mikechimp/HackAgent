@@ -302,6 +302,8 @@ def quick_vuln_check(page_data):
 
     # Check security headers
     for header_key, info in page_data.get("security_headers", {}).items():
+        if info is None:
+            info = {}
         if not info.get("present"):
             findings.append({
                 "type": "missing_header",
