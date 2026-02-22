@@ -288,6 +288,50 @@ def api_default_creds():
     return jsonify(results)
 
 
+@app.route("/api/setup-key", methods=["POST"])
+def api_setup_key():
+    """Save the user's OpenAI API key to the .env file."""
+    data = request.get_json()
+    if not data or "api_key" not in data:
+        return jsonify({"error": "Missing 'api_key' field"}), 400
+
+    api_key = data["api_key"].strip()
+    if not api_key:
+        return jsonify({"error": "API key cannot be empty"}), 400
+
+    # Write / update the .env file
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    try:
+        if env_path.exists():
+            lines = env_path.read_text().splitlines()
+            found = False
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if stripped.startswith("OPENAI_API_KEY=") or stripped.startswith("# OPENAI_API_KEY="):
+                    lines[i] = f"OPENAI_API_KEY={api_key}"
+                    found = True
+                    break
+            if not found:
+                lines.append(f"OPENAI_API_KEY={api_key}")
+            env_path.write_text("\n".join(lines) + "\n")
+        else:
+            env_path.write_text(f"OPENAI_API_KEY={api_key}\n")
+
+        # Activate the key in the current process immediately
+        os.environ["OPENAI_API_KEY"] = api_key
+
+        # Reset the cached OpenAI client so it picks up the new key
+        import models.openai_client as _oai
+        _oai._client = None
+
+        LOG.info("API key saved and activated via /api/setup-key")
+        return jsonify({"status": "ok"})
+
+    except Exception as e:
+        LOG.error(f"Failed to save API key: {e}")
+        return jsonify({"error": f"Failed to save key: {e}"}), 500
+
+
 @app.route("/api/status", methods=["GET"])
 def api_status():
     """Health check endpoint."""

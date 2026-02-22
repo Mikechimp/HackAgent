@@ -12,7 +12,7 @@ browser.runtime.onInstalled.addListener(() => {
 // Handle messages from popup that need background processing
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'checkBackend') {
-        fetch('http://localhost:5000/api/status')
+        fetch('http://localhost:5175/api/status')
             .then(resp => resp.json())
             .then(data => sendResponse({ online: true, data }))
             .catch(() => sendResponse({ online: false }));

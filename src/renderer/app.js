@@ -1,8 +1,10 @@
 /**
  * HackAgent Frontend — Chat, URL Analysis, and Extension Integration
+ * Electron renderer — uses preload bridge for API base URL.
  */
 
-const API_BASE = window.location.origin;
+const API_BASE = (window.hackagent && window.hackagent.getApiBase())
+    || 'http://localhost:5175';
 let sessionId = 'session-' + Date.now();
 
 // ─── DOM Elements ───
@@ -75,6 +77,9 @@ async function checkStatus() {
                     <p>Extension endpoint: <code style="color: #3dd8c5;">${API_BASE}/api/analyze-page</code></p>
                 `;
             }
+
+            // Check for new extension results
+            checkExtensionResults(data);
         }
     } catch (e) {
         dot.classList.remove('online');
@@ -83,7 +88,7 @@ async function checkStatus() {
 
         if (extStatus) {
             extStatus.className = 'extension-status offline';
-            extStatus.innerHTML = '<p style="color: #e85d5d;">Backend offline — start with: python run_web.py</p>';
+            extStatus.innerHTML = '<p style="color: #e85d5d;">Backend offline — restarting...</p>';
         }
     }
 }
@@ -467,6 +472,316 @@ if (kbSearch) {
             const text = cat.textContent.toLowerCase();
             cat.style.display = text.includes(query) ? 'block' : 'none';
         });
+    });
+}
+
+// ─── Projects ───
+const projectsList = document.getElementById('projects-list');
+const projectsEmpty = document.getElementById('projects-empty');
+const projectDetail = document.getElementById('project-detail');
+const projectMeta = document.getElementById('project-meta');
+const projectResults = document.getElementById('project-results');
+const projectNotes = document.getElementById('project-notes');
+const projectsBadge = document.getElementById('projects-badge');
+const projectsSearch = document.getElementById('projects-search');
+
+let currentProjects = [];
+let currentProjectId = null;
+
+async function loadProjects() {
+    try {
+        const resp = await fetch(API_BASE + '/api/projects');
+        currentProjects = await resp.json();
+        renderProjectsList(currentProjects);
+    } catch (e) {
+        console.error('Failed to load projects:', e);
+    }
+}
+
+function renderProjectsList(projects) {
+    const query = (projectsSearch?.value || '').toLowerCase();
+    const filtered = query
+        ? projects.filter(p => (p.name + ' ' + p.url + ' ' + p.notes).toLowerCase().includes(query))
+        : projects;
+
+    if (filtered.length === 0) {
+        projectsList.style.display = 'none';
+        projectsEmpty.style.display = 'block';
+        projectDetail.style.display = 'none';
+        return;
+    }
+
+    projectsEmpty.style.display = 'none';
+    projectDetail.style.display = 'none';
+    projectsList.style.display = 'flex';
+
+    projectsList.innerHTML = filtered.map(p => {
+        const date = new Date(p.created_at);
+        const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const sourceIcon = p.source === 'extension' ? '&#129418;' : '&#128269;';
+        const sourceLabel = p.source === 'extension' ? 'Extension' : 'URL Scan';
+        return `
+            <div class="project-card" data-id="${escapeHtml(p.id)}">
+                <div class="project-card-header">
+                    <span class="project-source">${sourceIcon} ${sourceLabel}</span>
+                    <span class="project-date">${timeStr}</span>
+                </div>
+                <h4 class="project-card-title">${escapeHtml(p.name)}</h4>
+                <p class="project-card-url">${escapeHtml(p.url)}</p>
+                <div class="project-card-footer">
+                    <span class="project-finding-count">${p.finding_count} finding${p.finding_count !== 1 ? 's' : ''}${p.has_ai ? ' + AI analysis' : ''}</span>
+                    ${p.notes ? '<span class="project-has-notes">&#128221; Notes</span>' : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    projectsList.querySelectorAll('.project-card').forEach(card => {
+        card.addEventListener('click', () => openProject(card.dataset.id));
+    });
+}
+
+async function openProject(id) {
+    try {
+        const resp = await fetch(API_BASE + '/api/projects/' + id);
+        if (!resp.ok) return;
+        const project = await resp.json();
+        currentProjectId = id;
+
+        projectsList.style.display = 'none';
+        projectsEmpty.style.display = 'none';
+        projectDetail.style.display = 'block';
+
+        const date = new Date(project.created_at);
+        projectMeta.innerHTML = `
+            <h3 class="project-detail-title">${escapeHtml(project.name)}</h3>
+            <p class="project-detail-url">${escapeHtml(project.url)}</p>
+            <p class="project-detail-date">${project.source === 'extension' ? '&#129418; Extension' : '&#128269; URL Scan'} &middot; ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+        `;
+
+        projectNotes.value = project.notes || '';
+
+        // Render findings using the shared renderer
+        renderProjectFindings(project);
+    } catch (e) {
+        console.error('Failed to open project:', e);
+    }
+}
+
+function renderProjectFindings(project) {
+    const f = project.findings || {};
+    const m = project.metadata || {};
+    let html = '';
+
+    // Overview (if URL scan)
+    if (m.status_code !== undefined) {
+        html += `
+            <div class="result-section">
+                <div class="result-section-header"><h3>Overview</h3><span style="color:var(--text-muted);font-size:12px;">Status: ${m.status_code || 'N/A'}</span></div>
+                <div class="result-section-body">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;">
+                        <div style="text-align:center;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);"><div style="font-size:24px;font-weight:700;color:var(--accent-gold);">${f.technologies ? f.technologies.length : 0}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Technologies</div></div>
+                        <div style="text-align:center;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);"><div style="font-size:24px;font-weight:700;color:var(--accent-gold);">${f.quick_findings ? f.quick_findings.length : 0}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Findings</div></div>
+                        <div style="text-align:center;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);"><div style="font-size:24px;font-weight:700;color:var(--accent-gold);">${m.forms_count || 0}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Forms</div></div>
+                        <div style="text-align:center;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm);"><div style="font-size:24px;font-weight:700;color:var(--accent-gold);">${m.scripts_count || 0}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Scripts</div></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Quick findings
+    if (f.quick_findings && f.quick_findings.length > 0) {
+        html += `
+            <div class="result-section">
+                <div class="result-section-header"><h3>Automated Findings</h3><span style="color:var(--text-muted);font-size:12px;">${f.quick_findings.length} issues</span></div>
+                <div class="result-section-body">
+                    ${f.quick_findings.map(item => `
+                        <div class="finding-item">
+                            <span class="severity-badge ${(item.severity || 'info').toLowerCase()}">${item.severity || 'Info'}</span>
+                            <div class="finding-detail"><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.description)}</p></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Attack surface matches
+    if (f.attack_surface_matches && f.attack_surface_matches.length > 0) {
+        html += `
+            <div class="result-section">
+                <div class="result-section-header"><h3>Attack Surface Matches</h3></div>
+                <div class="result-section-body">
+                    ${f.attack_surface_matches.map(match => `
+                        <div class="finding-item">
+                            <span class="severity-badge high">Match</span>
+                            <div class="finding-detail">
+                                <h4>${escapeHtml(match.technology)}</h4>
+                                <p><strong>Vectors:</strong> ${match.attack_vectors.map(v => escapeHtml(v)).join(', ')}</p>
+                                ${match.critical_cves?.length ? `<p><strong>CVEs:</strong> ${match.critical_cves.join(', ')}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // AI Analysis
+    if (f.ai_analysis) {
+        html += `
+            <div class="result-section">
+                <div class="result-section-header"><h3>AI Deep Analysis</h3><span style="color:var(--text-muted);font-size:12px;">GPT-4o</span></div>
+                <div class="result-section-body"><div class="ai-analysis-text">${formatMessage(f.ai_analysis)}</div></div>
+            </div>
+        `;
+    }
+
+    if (!html) {
+        html = '<div class="result-section"><div class="result-section-body"><p style="color:var(--text-muted);">No findings recorded for this project.</p></div></div>';
+    }
+
+    projectResults.innerHTML = html;
+}
+
+// Project detail actions
+document.getElementById('project-back')?.addEventListener('click', () => {
+    currentProjectId = null;
+    renderProjectsList(currentProjects);
+});
+
+document.getElementById('project-delete')?.addEventListener('click', async () => {
+    if (!currentProjectId) return;
+    if (!confirm('Delete this project?')) return;
+    try {
+        await fetch(API_BASE + '/api/projects/' + currentProjectId, { method: 'DELETE' });
+        currentProjectId = null;
+        await loadProjects();
+    } catch (e) {
+        alert('Failed to delete: ' + e.message);
+    }
+});
+
+document.getElementById('project-save-notes')?.addEventListener('click', async () => {
+    if (!currentProjectId) return;
+    const btn = document.getElementById('project-save-notes');
+    try {
+        await fetch(API_BASE + '/api/projects/' + currentProjectId, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: projectNotes.value }),
+        });
+        btn.textContent = 'Saved!';
+        setTimeout(() => { btn.textContent = 'Save Notes'; }, 2000);
+    } catch (e) {
+        alert('Failed to save notes: ' + e.message);
+    }
+});
+
+document.getElementById('projects-refresh')?.addEventListener('click', loadProjects);
+
+if (projectsSearch) {
+    projectsSearch.addEventListener('input', () => renderProjectsList(currentProjects));
+}
+
+// Load projects on startup
+loadProjects();
+
+// Check for new extension results during status polling
+function checkExtensionResults(data) {
+    if (data.pending_extension_result) {
+        // Show badge
+        if (projectsBadge) {
+            projectsBadge.style.display = 'inline-block';
+            projectsBadge.textContent = 'NEW';
+        }
+    }
+}
+
+// Clear badge when switching to projects panel
+const origNavClick = document.querySelectorAll('.nav-item');
+origNavClick.forEach(item => {
+    item.addEventListener('click', () => {
+        if (item.dataset.panel === 'projects') {
+            if (projectsBadge) projectsBadge.style.display = 'none';
+            // Dismiss on backend
+            fetch(API_BASE + '/api/extension/dismiss', { method: 'POST' }).catch(() => {});
+            loadProjects();
+        }
+    });
+});
+
+// ─── Extension Wizard ───
+
+// Tab switching
+document.querySelectorAll('.ext-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.ext-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.ext-method').forEach(m => m.classList.remove('active'));
+        tab.classList.add('active');
+        const method = document.getElementById('ext-method-' + tab.dataset.method);
+        if (method) method.classList.add('active');
+    });
+});
+
+// Copy-to-clipboard buttons
+document.querySelectorAll('.ext-copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const text = btn.dataset.copy;
+        navigator.clipboard.writeText(text).then(() => {
+            btn.classList.add('copied');
+            const origTitle = btn.title;
+            btn.title = 'Copied!';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.title = origTitle;
+            }, 2000);
+        });
+    });
+});
+
+// Download extension .xpi
+const extDownloadBtn = document.getElementById('ext-download-btn');
+if (extDownloadBtn) {
+    extDownloadBtn.addEventListener('click', async () => {
+        extDownloadBtn.disabled = true;
+        const origHTML = extDownloadBtn.innerHTML;
+        extDownloadBtn.innerHTML = '<span class="spinner"></span> Downloading...';
+
+        try {
+            const resp = await fetch(API_BASE + '/api/extension/download');
+            if (!resp.ok) {
+                let errMsg = 'Download failed';
+                try {
+                    const err = await resp.json();
+                    errMsg = err.error || errMsg;
+                } catch (_) {}
+                extDownloadBtn.innerHTML = origHTML;
+                extDownloadBtn.disabled = false;
+                alert(errMsg);
+                return;
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hackagent.xpi';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            extDownloadBtn.innerHTML = '&#10003; Downloaded!';
+            setTimeout(() => {
+                extDownloadBtn.innerHTML = origHTML;
+                extDownloadBtn.disabled = false;
+            }, 3000);
+        } catch (e) {
+            extDownloadBtn.innerHTML = origHTML;
+            extDownloadBtn.disabled = false;
+            alert('Download failed: ' + e.message);
+        }
     });
 }
 
