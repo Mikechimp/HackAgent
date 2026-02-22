@@ -1,183 +1,158 @@
-# HackAgent -- Safe, Lab-Only AI Analysis Agent
+# HackAgent — AI-Powered Bug Bounty Recon Tool
 
-This repository provides a safe, analysis-only AI agent framework to help accelerate CTFs, labs,
-and lawful bug-bounty workflows. It is explicitly **not** an offensive automation framework.
-Everything that could touch external networks is gated behind manual approval.
+An Electron desktop application with a Firefox extension for authorized security testing and bug bounty hunting. Uses GPT-4o + the Jhaddix attack surface knowledge base for intelligent vulnerability detection.
 
-**Important:** Run this only in an isolated VM or lab environment. Snapshot the VM before use.
+**Important:** This tool is for **authorized security testing only**. Always verify you have written permission before scanning any target.
+
+## Quick Start
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Build the app
+npm run build
+
+# 3. Run in development mode
+npm run dev
+```
+
+On first launch, enter your OpenAI API key in the setup screen.
+
+## npm Scripts
+
+| Command | What it does |
+|---------|-------------|
+| `npm run build` | Compile TypeScript + copy renderer files to `dist/` |
+| `npm run dev` | Development mode with live reload (TypeScript watcher + file watcher + Electron) |
+| `npm start` | Build and launch the Electron app |
+| `npm run build:extension` | Package the Firefox extension into `dist/extension/hackagent.xpi` |
+| `npm run package` | Build app + extension, then create distributable (unpacked) |
+| `npm run make` | Build app + extension, then create installer (AppImage/dmg/nsis) |
 
 ## Architecture
 
 ```
-CLI (interfaces/cli.py)
+Electron Main Process (main.ts)
  |
- +--> submit_job()  --> data/submit.json --> Worker container --> Orchestrator container
+ +---> BackendManager  ---> Express server (port 5175)
+ |                           |
+ |                           +---> Page Analyzer (20+ automated checks)
+ |                           +---> OpenAI Client (GPT-4o with Jhaddix context)
+ |                           +---> Projects CRUD (file-based persistence)
+ |                           +---> Attack Surface DB (Jhaddix knowledge base)
  |
- +--> --recon       --> tasks/recon_task.py    --> tools/file_analysis.py --> core/sandbox.py
- +--> --forensics   --> tasks/forensics_task.py --> tools/file_analysis.py --> core/sandbox.py
- +--> --triage      --> recon + forensics + AI triage via models/router.py
+ +---> BrowserWindow   ---> Renderer (index.html + app.js)
+                             |
+                             +---> Scanner Panel (URL analysis)
+                             +---> Chat Panel (HackAgent AI assistant)
+                             +---> Projects Panel (saved research)
+                             +---> Extension Panel (Firefox extension setup)
+
+Firefox Extension (MV2)
+ |
+ +---> popup.js        ---> Analyze current page / capture screenshot
+ +---> content.js      ---> Deep page data capture (DOM, storage, scripts)
+ +---> background.js   ---> Message routing to backend API
 ```
 
-| Component | Purpose |
-|-----------|---------|
-| `core/sandbox.py` | Resource-limited subprocess wrapper (5 s CPU, 150 MB RAM) |
-| `core/config.py` | Centralized YAML config loader with env-var overrides |
-| `core/agent.py` | Glue that sends worker output to the AI for triage |
-| `models/anthropic_client.py` | Claude API wrapper with budget guards and retries |
-| `models/router.py` | Routes tasks to the appropriate Claude model |
-| `tools/file_analysis.py` | Runs `file`, `strings`, `xxd` on artifacts |
-| `tools/shell_safe.py` | Blocks network tools (`nmap`, `curl`, etc.) |
-| `workers/worker.py` | Containerized tool executor with whitelist enforcement |
-| `orchestrator/orchestrator.py` | Reads worker output, calls Claude, validates schema |
+## Detection Engine
 
-## Safety Controls
+The automated scanner checks 20+ vulnerability categories before feeding everything to GPT-4o:
 
-- **Tool whitelist**: Only `file`, `strings`, `xxd`, `hexdump`, `binwalk`, `exiftool` are allowed.
-- **Blocked terms**: Prompts containing `reverse shell`, `meterpreter`, `nmap`, etc. are rejected.
-- **Network gating**: Any job requesting network access requires manual `yes` confirmation.
-- **Resource limits**: 5-second CPU timeout, 150 MB RAM cap per tool invocation.
-- **Budget guards**: Daily token cap (200 K) and per-minute rate limit (12 req/min).
-- **No code execution**: `auto_execute_generated_code` is `false` by default.
-- **Container isolation**: Docker with `cap_drop: ALL` and `no-new-privileges`.
+- **Secret Scanning** — 28 patterns (AWS keys, Google API, GitHub tokens, Stripe, Slack, JWT, private keys, DB connection strings, S3 buckets)
+- **CORS Misconfiguration** — Wildcard origins, credential leaks
+- **Sensitive Path Detection** — 55 paths (.git, .env, /admin, /actuator, /graphiql, /phpinfo, terraform.tfstate)
+- **Technology Fingerprinting** — 70+ technologies with version extraction (CMS, frameworks, DevOps tools, servers, CDNs, WAFs)
+- **CSP Analysis** — unsafe-inline, unsafe-eval, wildcards, data: URI
+- **Cookie Security** — Secure, HttpOnly, session cookie analysis
+- **Form Security** — Missing CSRF, file uploads, IDOR hidden fields, HTTP submissions
+- **Dangerous JS Patterns** — 18 DOM XSS sinks (eval, innerHTML, postMessage, Function constructor)
+- **Open Redirect Detection** — 26 known redirect parameter names
+- **API Endpoint Discovery** — REST/GraphQL/auth endpoints from inline JS
+- **Subdomain Enumeration** — From page links
+- **Source Map Exposure** — Leaked original source code
+- **Comment Analysis** — Secrets, internal IPs, TODO notes
+- **WAF/CDN Detection** — Cloudflare, Sucuri, Imperva, AWS WAF
+- **Mixed Content** — HTTP resources on HTTPS pages
+- **Email Disclosure** — Exposed email addresses
+- **JSONP Detection** — Cross-origin data leak vectors
+- **Server Version Disclosure** — Version info in headers
 
-## Quickstart
+## Jhaddix Attack Surface Integration
 
-### 1. Clone and set up
+The `data/attack_surface.json` knowledge base is loaded at startup and actively fed into every analysis:
 
-```bash
-git clone <repo-url> && cd HackAgent
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+- **Attack vectors** for matched technologies (Jenkins, GitLab, Confluence, Vault, etc.)
+- **Critical CVEs** cross-referenced against detected software versions
+- **Default credentials** for 28+ services (databases, web apps, network devices)
+- **OWASP Top 10** checklist applied to every scan
+- **Web vulnerability signatures** (XSS, SQLi, SSRF, path traversal, RCE, LFI)
 
-### 2. (Optional) Set your API key
+GPT-4o receives all of this context alongside the automated findings, enabling it to validate discoveries and identify attack paths the scanner can't see.
 
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-```
+## Firefox Extension
 
-Without an API key the tool still works -- it falls back to a local echo mode.
+The extension captures deep page data from the browser:
 
-### 3. Run a local analysis
+- Full HTML + inline script contents (for secret scanning)
+- localStorage / sessionStorage keys and values
+- All forms with hidden field values (IDOR detection)
+- API endpoints discovered in JavaScript
+- Client-side technology detection
+- HTML comments, meta tags, cookies
+- Service worker info, CSP meta tags
 
-```bash
-# Recon only
-python -m interfaces.cli --recon /path/to/artifact.bin
+### Installing the Extension
 
-# Forensics only
-python -m interfaces.cli --forensics /path/to/artifact.bin
+1. Run `npm run build:extension` to create the `.xpi` file
+2. In Firefox: `about:debugging` > This Firefox > Load Temporary Add-on
+3. Select `firefox_extension/manifest.json`
 
-# Full pipeline: recon + forensics + AI triage
-python -m interfaces.cli --triage /path/to/artifact.bin
-```
-
-### 4. Submit a job for container-based processing
-
-```bash
-# Write a job to data/submit.json
-python -m interfaces.cli --submit /app/data/artifact.bin
-
-# Then start the containers
-docker compose up --build
-```
-
-## Docker Deployment
-
-```bash
-# Build and run both worker + orchestrator
-docker compose up --build
-
-# Or run just the worker
-docker compose up worker
-```
-
-The compose file creates an **internal-only network** -- no container can reach the internet.
-
-## Configuration
-
-### `config/settings.yaml`
-
-```yaml
-model_default: "claude-sonnet-4-20250514"
-max_prompt_length: 200000
-per_job_token_cap: 8000
-local_tool_timeout: 20
-```
-
-### `workers/safety_rules.yaml`
-
-```yaml
-blocked_terms:
-  - "reverse shell"
-  - "meterpreter"
-  - "bind shell"
-network_require_approval: true
-auto_execute_generated_code: false
-max_tool_time_seconds: 30
-max_tool_memory_mb: 200
-```
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Claude API key (optional -- local echo fallback if unset) |
-| `HACKAGENT_MODEL` | Override the default model name |
-| `HACKAGENT_TOKEN_CAP` | Override the per-job token cap |
-| `HACKAGENT_DATA_DIR` | Override the data directory (default: `data`) |
-| `HACKAGENT_LOG_DIR` | Override the log directory (default: `logs`) |
-
-## Running Tests
-
-```bash
-pip install pytest
-pytest tests/ -v
-```
+Or use the Extension panel in the app for guided setup.
 
 ## Project Structure
 
 ```
 HackAgent/
-├── config/
-│   ├── settings.yaml        # Model and timeout settings
-│   └── tools.yaml            # Whitelisted tool names
-├── core/
-│   ├── agent.py              # AI triage glue
-│   ├── config.py             # Centralized config loader
-│   ├── sandbox.py            # Resource-limited subprocess runner
-│   └── utils.py              # JSON/hash helpers
+├── src/
+│   ├── main/
+│   │   ├── main.ts              # Electron main process
+│   │   ├── preload.ts           # Context bridge for renderer
+│   │   └── backend-manager.ts   # Express server lifecycle
+│   ├── backend/
+│   │   ├── server.ts            # Express API routes + unified pipeline
+│   │   ├── services/
+│   │   │   ├── page-analyzer.ts # 20+ automated vulnerability checks
+│   │   │   └── openai-client.ts # GPT-4o with Jhaddix context injection
+│   │   └── models/
+│   │       └── types.ts         # TypeScript interfaces
+│   └── renderer/
+│       ├── index.html           # Main UI
+│       ├── app.js               # Frontend logic
+│       └── styles/style.css     # Styles
+├── firefox_extension/
+│   ├── manifest.json            # WebExtension manifest (MV2)
+│   ├── popup/                   # Extension popup UI
+│   ├── content/content.js       # Deep page capture script
+│   └── background/background.js # Message routing
 ├── data/
-│   └── submit.json           # Job staging file
-├── interfaces/
-│   └── cli.py                # Command-line interface
-├── models/
-│   ├── anthropic_client.py   # Claude API client with budget guards
-│   └── router.py             # Task-to-model routing
-├── orchestrator/
-│   ├── Dockerfile
-│   └── orchestrator.py       # Container-based triage orchestrator
-├── tasks/
-│   ├── recon_task.py          # Local artifact reconnaissance
-│   └── forensics_task.py      # Timeline and binary forensics
-├── tools/
-│   ├── file_analysis.py       # file/strings/xxd wrappers
-│   └── shell_safe.py          # Network tool blocker
-├── workers/
-│   ├── Dockerfile
-│   ├── worker.py              # Containerized tool executor
-│   ├── safety_rules.yaml      # Blocked terms and policies
-│   └── tools_whitelist.json   # Allowed tool names
-├── tests/
-│   ├── test_sandbox.py
-│   ├── test_safety.py
-│   └── test_config.py
-├── docker-compose.yml
-├── pyproject.toml
-├── requirements.txt
+│   ├── attack_surface.json      # Jhaddix attack surface knowledge base
+│   └── projects/                # Saved analysis results (auto-created)
+├── config/
+│   └── settings.yaml            # App settings
+├── package.json
+├── tsconfig.json
 └── README.md
 ```
 
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | OpenAI API key (can also be set via the app UI) |
+| `HACKAGENT_PORT` | Backend server port (default: `5175`) |
+
 ## License
 
-[Eclipse Public License 2.0](LICENSE)
+[MIT](LICENSE)
